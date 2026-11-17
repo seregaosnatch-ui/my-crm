@@ -276,21 +276,24 @@ function parseVoice(text) {
   const today = new Date(); today.setHours(0,0,0,0);
 
   // Время
+  const hasMorning = /утра|ночи/.test(lower);
   let m = lower.match(/в\s+(\d{1,2}):(\d{2})/);
   if (m) {
-    result.time = pad2(+m[1]) + ':' + m[2];
+    let h = +m[1];
+    if (h < 8 && !hasMorning) h += 12;
+    result.time = pad2(h) + ':' + m[2];
   } else {
     m = lower.match(/в\s+(\d{1,2})(?!\d)/);
     if (m) {
       let h = +m[1];
-      if (h < 8) h += 12;
+      if (h < 8 && !hasMorning) h += 12;
       result.time = pad2(h) + ':00';
     } else {
       for (const [word, num] of NUM_WORDS) {
         const re = new RegExp('в\\s+' + word + '(?:\\s+час[а-я]*)?(?=\\s|,|$)');
         if (re.test(lower)) {
           let h = num;
-          if (h < 8) h += 12;
+          if (h < 8 && !hasMorning) h += 12;
           result.time = pad2(h) + ':00';
           break;
         }
