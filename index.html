@@ -138,13 +138,18 @@ let db, state = { tab:'today', date:'', clientId:null };
 let idb = null;
 
 /* ---------- утилиты ---------- */
-function todayISO() { return new Date().toISOString().slice(0,10); }
-function isoDate(d) { return d.toISOString().slice(0,10); }
+function todayISO() { 
+  const d = new Date();
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+function isoDate(d) { 
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 function pad2(n) { return String(n).padStart(2, '0'); }
 function shiftDate(iso, days) {
   const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0,10);
+  return isoDate(d);
 }
 function fmtDate(iso) {
   const d = new Date(iso + 'T12:00:00');
@@ -153,7 +158,7 @@ function fmtDate(iso) {
 }
 function fmtDateTime(ts) {
   const d = new Date(ts);
-  return fmtDate(d.toISOString().slice(0,10)) + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  return fmtDate(isoDate(d)) + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
 }
 function fmtMoney(n) { return (n||0).toLocaleString('ru-RU') + ' ₽'; }
 function fmtDur(sec) {
