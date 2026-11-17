@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f7f9">
+<title>Записи</title>
+<style>
+  :root {
+    --bg:#f6f7f9; --card:#fff; --text:#1c1f24; --muted:#8a909a; --line:#eceef2;
+    --accent:#2f6bff; --green:#1fa971; --green-soft:#e6f7ef;
+    --orange:#e08a00; --orange-soft:#fdf3e2; --red:#e04545; --radius:14px;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); font-size:15px; line-height:1.4; }
+  #app { max-width:480px; margin:0 auto; min-height:100vh; padding-bottom:84px; position:relative; }
+  header { position:sticky; top:0; z-index:10; background:var(--bg);
+    padding:14px 16px 10px; display:flex; align-items:center; gap:10px; }
+  header h1 { font-size:18px; margin:0; flex:1; font-weight:700; }
+  .hdr-btn { border:1px solid var(--line); background:var(--card);
+    width:40px; height:40px; border-radius:12px; font-size:18px; cursor:pointer; }
+  .datebar { display:flex; align-items:center; gap:8px; padding:0 16px 10px; }
+  .datebar button { border:1px solid var(--line); background:var(--card);
+    width:34px; height:34px; border-radius:10px; font-size:16px; color:var(--text); }
+  .datebar .label { flex:1; text-align:center; font-weight:600; font-size:14px; }
+  .list { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
+  .card { background:var(--card); border-radius:var(--radius); padding:14px;
+    border:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
+  .card .top { display:flex; align-items:baseline; gap:10px; }
+  .card .time { font-weight:700; font-size:15px; min-width:50px; }
+  .card .name { font-weight:600; flex:1; }
+  .card .sub { color:var(--muted); font-size:13px; }
+  .card .price { font-weight:600; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { font-size:12px; padding:3px 8px; border-radius:999px; font-weight:600; }
+  .chip.green { background:var(--green-soft); color:var(--green); }
+  .chip.orange { background:var(--orange-soft); color:var(--orange); }
+  .chip.gray { background:var(--line); color:var(--muted); }
+  .summary { margin:14px 16px 0; padding:14px; background:var(--card);
+    border-radius:var(--radius); border:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center; font-size:14px; }
+  .summary b { font-size:16px; }
+  .fab { position:fixed; bottom:92px; right:max(16px, calc(50% - 224px));
+    background:var(--accent); color:#fff; border:none; padding:14px 20px;
+    border-radius:999px; font-size:15px; font-weight:600;
+    box-shadow:0 8px 20px rgba(47,107,255,.35); z-index:20; font-family:inherit; cursor:pointer; }
+  nav { position:fixed; bottom:0; left:0; right:0; z-index:15;
+    background:rgba(255,255,255,.96); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); display:flex; justify-content:center; }
+  nav .inner { max-width:480px; width:100%; display:flex; }
+  nav button { flex:1; background:none; border:none; padding:12px 0 14px;
+    font-size:11px; color:var(--muted); font-weight:600; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+  nav button.active { color:var(--accent); }
+  nav button .ico { font-size:18px; }
+  .empty { text-align:center; color:var(--muted); padding:40px 20px; font-size:14px; }
+  .money-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px; }
+  .money-tile { background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px; }
+  .money-tile .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
+  .money-tile .v { font-size:20px; font-weight:700; }
+  .money-tile.full { grid-column:1 / -1; }
+  .money-tile.warn .v { color:var(--orange); }
+  .sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:30;
+    display:flex; align-items:flex-end; justify-content:center; }
+  .sheet { background:#fff; width:100%; max-width:480px;
+    border-radius:20px 20px 0 0; padding:18px 18px 24px;
+    max-height:90vh; overflow-y:auto; animation:up .18s ease; }
+  @keyframes up { from { transform:translateY(30px); opacity:.5; } }
+  .sheet h2 { margin:0 0 14px; font-size:17px; }
+  .sheet .row { margin-bottom:12px; }
+  .sheet label { display:block; font-size:12px; color:var(--muted);
+    margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+  .sheet input, .sheet select, .sheet textarea { width:100%; padding:12px;
+    border:1px solid var(--line); border-radius:10px; font-size:15px;
+    font-family:inherit; background:#fff; color:var(--text); }
+  .sheet textarea { resize:vertical; min-height:70px; }
+  .sheet .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .sheet .btn-row { display:flex; gap:10px; margin-top:16px; }
+  .btn { flex:1; padding:14px; border-radius:12px; border:none;
+    font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; }
+  .btn.primary { background:var(--accent); color:#fff; }
+  .btn.ghost { background:var(--line); color:var(--text); }
+  .btn.danger { background:#fdecec; color:var(--red); }
+  .btn.small { padding:10px; font-size:14px; }
+  .sheet .actions { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .kv { display:flex; justify-content:space-between; padding:8px 0;
+    border-bottom:1px solid var(--line); font-size:14px; }
+  .kv:last-child { border-bottom:none; }
+  .kv .k { color:var(--muted); }
+  .kv .v { font-weight:600; }
+  .history-item { display:flex; justify-content:space-between; padding:8px 0;
+    font-size:14px; border-bottom:1px solid var(--line); }
+  .history-item:last-child { border-bottom:none; }
+  .voice-card { display:flex; flex-direction:column; gap:8px; }
+  .voice-top { display:flex; align-items:center; gap:10px; }
+  .voice-play { width:44px; height:44px; border-radius:50%; border:none;
+    background:var(--accent); color:#fff; font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .voice-play.playing { background:var(--red); }
+  .voice-meta { flex:1; }
+  .voice-meta .who { font-weight:600; font-size:14px; }
+  .voice-meta .when { color:var(--muted); font-size:12px; }
+  .voice-del { background:none; border:none; color:var(--muted);
+    font-size:18px; cursor:pointer; padding:4px 8px; }
+  .voice-rec { display:flex; flex-direction:column; align-items:center; gap:14px; padding:16px 0; }
+  .rec-circle { width:96px; height:96px; border-radius:50%; border:none; background:var(--red);
+    color:#fff; font-size:40px; cursor:pointer; display:flex; align-items:center;
+    justify-content:center; transition:transform .1s; box-shadow:0 8px 24px rgba(224,69,69,.35); }
+  .rec-circle:active { transform:scale(.95); }
+  .rec-circle.recording { animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(224,69,69,.5); } 50% { box-shadow:0 0 0 16px rgba(224,69,69,0); } }
+  .rec-timer { font-size:28px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .rec-hint { color:var(--muted); font-size:13px; text-align:center; }
+  .err-box { background:#fdecec; color:var(--red); padding:12px; border-radius:10px;
+    font-size:13px; text-align:center; }
+  .transcript-box { padding:10px; border:1px solid var(--line); border-radius:10px;
+    font-size:14px; background:#f6f7f9; min-height:44px; color:var(--text); }
+  .hint-green { font-size:12px; margin-top:6px; color:var(--green); }
+  .hint-muted { font-size:12px; margin-top:6px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="header"></header>
+  <main id="view"></main>
+</div>
+<div id="modal"></div>
+<nav><div class="inner" id="tabs"></div></nav>
+
+<script>
+const LS_KEY = 'mini_crm_v1';
+const IDB_NAME = 'mini_crm_audio';
+const IDB_STORE = 'notes';
+let db, state = { tab:'today', date:'', clientId:null };
+let idb = null;
+
+/* ---------- утилиты ---------- */
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function isoDate(d) { return d.toISOString().slice(0,10); }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function shiftDate(iso, days) {
+  const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+function fmtDate(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  const m = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  return d.getDate() + ' ' + m[d.getMonth()];
+}
+function fmtDateTime(ts) {
+  const d = new Date(ts);
+  return fmtDate(d.toISOString().slice(0,10)) + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+function fmtMoney(n) { return (n||0).toLocaleString('ru-RU') + ' ₽'; }
+function fmtDur(sec) {
+  const s = Math.max(0, Math.round(sec));
+  return Math.floor(s/60) + ':' + pad2(s%60);
+}
+function fmtBytes(b) {
+  if (b < 1024) return b + ' Б';
+  if (b < 1024*1024) return (b/1024).toFixed(0) + ' КБ';
+  return (b/1024/1024).toFixed(1) + ' МБ';
+}
+function monthKey(iso) { return iso.slice(0,7); }
+function uid() { return Math.random().toString(36).slice(2,9); }
+function esc(s) { return String(s||'').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function plural(n,a,b,c) {
+  const n10 = n % 10, n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return a;
+  if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return b;
+  return c;
+}
+
+/* ---------- хранилище ---------- */
+function loadDB() {
+  const raw = localStorage.getItem(LS_KEY);
+  if (raw) { try { return JSON.parse(raw); } catch(e){} }
+  const d = seed(); saveDB(d); return d;
+}
+function saveDB(x) { localStorage.setItem(LS_KEY, JSON.stringify(x)); }
+function seed() {
+  const t = todayISO();
+  const d = n => shiftDate(t, n);
+  return {
+    clients: [
+      {id:'c1', name:'Анна Ковалёва', phone:'+7 999 123-45-67', tg:'@anna_tg', notes:'Любит квадрат, аллергия на гель-лак X'},
+      {id:'c2', name:'Мария Смирнова', phone:'+7 999 222-33-44', tg:'@maria_s', notes:''},
+      {id:'c3', name:'Ольга Петрова', phone:'+7 999 555-66-77', tg:'', notes:'Приходит с ребёнком'},
+    ],
+    appointments: [
+      {id:'a1', clientId:'c1', service:'Маникюр', price:2500, date:d(0), time:'10:00', paid:true, reminderOn:true, reminderSent:true},
+      {id:'a2', clientId:'c2', service:'Брови', price:1800, date:d(0), time:'12:30', paid:false, reminderOn:true, reminderSent:false},
+      {id:'a3', clientId:'c3', service:'Маникюр', price:2500, date:d(0), time:'15:00', paid:false, reminderOn:true, reminderSent:true},
+      {id:'a4', clientId:'c1', service:'Маникюр', price:2500, date:d(-32), time:'11:00', paid:true, reminderOn:false, reminderSent:false},
+      {id:'a5', clientId:'c1', service:'Маникюр', price:2500, date:d(-40), time:'11:00', paid:true, reminderOn:false, reminderSent:false},
+    ]
+  };
+}
+
+/* ---------- IndexedDB ---------- */
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE, { keyPath:'id' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function idbAdd(note) {
+  return new Promise((res, rej) => {
+    const tx = idb.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(note);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+function idbGetAll() {
+  return new Promise((res, rej) => {
+    const tx = idb.transaction(IDB_STORE, 'readonly');
+    const r = tx.objectStore(IDB_STORE).getAll();
+    r.onsuccess = () => res(r.result || []);
+    r.onerror = () => rej(r.error);
+  });
+}
+function idbDelete(id) {
+  return new Promise((res, rej) => {
+    const tx = idb.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(id);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+/* ---------- парсер голоса ---------- */
+const MONTHS_GEN = {
+  'января':1,'февраля':2,'марта':3,'апреля':4,'мая':5,'июня':6,
+  'июля':7,'августа':8,'сентября':9,'октября':10,'ноября':11,'декабря':12
+};
+const WEEKDAY_PATTERNS = [
+  { re: /в\s+понедельник/, wd: 1 },
+  { re: /в\s+вторник/, wd: 2 },
+  { re: /в\s+сред/, wd: 3 },
+  { re: /в\s+четверг/, wd: 4 },
+  { re: /в\s+пятниц/, wd: 5 },
+  { re: /в\s+суббот/, wd: 6 },
+  { re: /в\s+воскресень/, wd: 0 },
+];
+const NUM_WORDS = [
+  ['одиннадцать',11],['двенадцать',12],['тринадцать',13],['четырнадцать',14],
+  ['пятнадцать',15],['шестнадцать',16],['семнадцать',17],['восемнадцать',18],
+  ['девятнадцать',19],['двадцать',20],
+  ['десять',10],['девять',9],['восемь',8],['семь',7],['шесть',6],['пять',5],
+  ['четыре',4],['три',3],['два',2],['две',2],['одна',1],['один',1],['одну',1]
+];
+const SERVICES = ['маникюр','педикюр','брови','ресницы','стрижка','окрашивание','массаж','эпиляция','шугаринг','укладка','макияж'];
+const SERVICE_PRICES = {
+  'маникюр':2500,'педикюр':3000,'брови':1800,'ресницы':2500,
+  'стрижка':2000,'окрашивание':5000,'массаж':3000,
+};
+
+function parseVoice(text) {
+  const result = { name:null, service:null, price:null, date:null, time:null, rawText:text };
+  const lower = text.toLowerCase().replace(/ё/g,'е');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Время
+  let m = lower.match(/в\s+(\d{1,2}):(\d{2})/);
+  if (m) {
+    result.time = pad2(+m[1]) + ':' + m[2];
+  } else {
+    m = lower.match(/в\s+(\d{1,2})(?!\d)/);
+    if (m) {
+      let h = +m[1];
+      if (h < 8) h += 12;
+      result.time = pad2(h) + ':00';
+    } else {
+      for (const [word, num] of NUM_WORDS) {
+        const re = new RegExp('в\\s+' + word + '(?:\\s+час[а-я]*)?(?=\\s|,|$)');
+        if (re.test(lower)) {
+          let h = num;
+          if (h < 8) h += 12;
+          result.time = pad2(h) + ':00';
+          break;
+        }
+      }
+    }
+  }
+
+  // Дата
+  if (/послезавтра/.test(lower)) {
+    result.date = isoDate(addDays(today, 2));
+  } else if (/завтра/.test(lower)) {
+    result.date = isoDate(addDays(today, 1));
+  } else if (/сегодня/.test(lower)) {
+    result.date = isoDate(today);
+  } else {
+    let dm = lower.match(/(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/);
+    if (dm) {
+      const d = +dm[1], mo = MONTHS_GEN[dm[2]];
+      let year = today.getFullYear();
+      let cand = new Date(year, mo - 1, d);
+      if (cand < today) cand = new Date(year + 1, mo - 1, d);
+      result.date = isoDate(cand);
+    } else {
+      for (const {re, wd} of WEEKDAY_PATTERNS) {
+        if (re.test(lower)) {
+          let diff = (wd - today.getDay() + 7) % 7;
+          if (diff === 0) diff = 7;
+          result.date = isoDate(addDays(today, diff));
+          break;
+        }
+      }
+    }
+  }
+
+  // Услуга
+  for (const s of SERVICES) {
+    if (lower.includes(s)) {
+      result.service = s[0].toUpperCase() + s.slice(1);
+      result.price = SERVICE_PRICES[s] || null;
+      break;
+    }
+  }
+
+  // Имя: первый фрагмент до запятой, первое слово
+  const chunks = text.split(',').map(x => x.trim()).filter(Boolean);
+  if (chunks.length) {
+    const firstWord = chunks[0].split(/\s+/)[0];
+    if (firstWord && /^[А-ЯЁA-Z]/.test(firstWord)) result.name = firstWord;
+  }
+
+  return result;
+}
+
+/* ---------- рендер ---------- */
+function render() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = [
+    {id:'today', ico:'📅', label:'Сегодня'},
+    {id:'clients', ico:'👥', label:'Клиенты'},
+    {id:'voice', ico:'🎤', label:'Заметки'},
+    {id:'money', ico:'💰', label:'Деньги'},
+  ].map(t => `<button data-tab="${t.id}" class="${state.tab===t.id?'active':''}"><span class="ico">${t.ico}</span>${t.label}</button>`).join('');
+
+  const header = document.getElementById('header');
+  const view = document.getElementById('view');
+  if (state.tab === 'today') renderToday(header, view);
+  else if (state.tab === 'clients') renderClients(header, view);
+  else if (state.tab === 'voice') renderVoice(header, view);
+  else renderMoney(header, view);
+}
+
+function apptCard(a) {
+  const c = db.clients.find(x => x.id === a.clientId);
+  const chips = [];
+  chips.push(a.paid ? '<span class="chip green">✅ оплачено</span>' : '<span class="chip orange">⏳ не оплачено</span>');
+  if (a.reminderSent) chips.push('<span class="chip gray">📩 напоминание ушло</span>');
+  return `<div class="card" data-appt="${a.id}">
+    <div class="top">
+      <div class="time">${a.time}</div>
+      <div class="name">${esc(c?c.name:'Без имени')}</div>
+      <div class="price">${fmtMoney(a.price)}</div>
+    </div>
+    <div class="sub">${esc(a.service)}</div>
+    <div class="chips">${chips.join('')}</div>
+  </div>`;
+}
+
+function renderToday(header, view) {
+  header.innerHTML = `<h1>Записи</h1><button class="hdr-btn" id="hdr-mic" title="Голосом создать запись">🎤</button>`;
+  document.getElementById('hdr-mic').onclick = openVoiceAdmin;
+
+  const date = state.date;
+  const list = db.appointments.filter(a => a.date === date).sort((x,y)=>x.time.localeCompare(y.time));
+  const total = list.reduce((s,a)=>s+(a.price||0),0);
+  const isToday = date === todayISO();
+  view.innerHTML = `
+    <div class="datebar">
+      <button data-shift="-1">‹</button>
+      <div class="label">${isToday?'Сегодня, ':''}${fmtDate(date)}</div>
+      <button data-shift="1">›</button>
+    </div>
+    <div class="list">
+      ${list.length ? list.map(apptCard).join('') : `<div class="empty">На этот день записей нет.<br>Нажмите «+ Запись» или 🎤</div>`}
+    </div>
+    ${list.length ? `<div class="summary"><span>${list.length} ${plural(list.length,'запись','записи','записей')} на день</span><b>${fmtMoney(total)}</b></div>` : ''}
+    <button class="fab" id="fab-add">+ Запись</button>
+  `;
+  view.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => {
+    state.date = shiftDate(state.date, +b.dataset.shift); render();
+  });
+  view.querySelectorAll('[data-appt]').forEach(el => el.onclick = () => openApptSheet(el.dataset.appt));
+  document.getElementById('fab-add').onclick = () => openNewAppt(null);
+}
+
+function renderClients(header, view) {
+  if (state.clientId) return renderClientCard(header, view);
+  header.innerHTML = `<h1>Клиенты</h1>`;
+  view.innerHTML = `
+    <div class="list">
+      ${db.clients.length ? db.clients.map(c => {
+        const appts = db.appointments.filter(a => a.clientId === c.id);
+        const last = [...appts].sort((x,y)=> (y.date+y.time).localeCompare(x.date+x.time))[0];
+        return `<div class="card" data-client="${c.id}">
+          <div class="top">
+            <div class="name">${esc(c.name)}</div>
+            <div class="sub">${appts.length} ${plural(appts.length,'визит','визита','визитов')}</div>
+          </div>
+          <div class="sub">${last ? 'Последний: ' + fmtDate(last.date) + ' · ' + esc(last.service) : 'Ещё не было визитов'}</div>
+        </div>`;
+      }).join('') : `<div class="empty">Клиентов пока нет</div>`}
+    </div>`;
+  view.querySelectorAll('[data-client]').forEach(el => el.onclick = () => {
+    state.clientId = el.dataset.client; render();
+  });
+}
+
+async function renderClientCard(header, view) {
+  const c = db.clients.find(x => x.id === state.clientId);
+  if (!c) { state.clientId = null; return renderClients(header, view); }
+  header.innerHTML = `<button class="hdr-btn" id="back-clients" style="font-size:22px">‹</button><h1>${esc(c.name)}</h1>`;
+  document.getElementById('back-clients').onclick = () => { state.clientId = null; render(); };
+
+  const appts = db.appointments.filter(a => a.clientId === c.id)
+    .sort((x,y)=> (y.date+y.time).localeCompare(x.date+x.time));
+  const paid = appts.filter(a=>a.paid).reduce((s,a)=>s+(a.price||0),0);
+  const voices = await idbGetAll();
+  const myVoices = voices.filter(v => v.clientId === c.id).sort((a,b)=>b.createdAt - a.createdAt);
+
+  view.innerHTML = `
+    <div style="padding:0 16px 12px;color:var(--muted);font-size:14px">
+      ${[c.phone, c.tg].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}
+    </div>
+    <div class="list">
+      <div class="card">
+        <div class="kv"><span class="k">Визитов</span><span class="v">${appts.length}</span></div>
+        <div class="kv"><span class="k">Всего заплатила</span><span class="v">${fmtMoney(paid)}</span></div>
+        <div class="kv"><span class="k">Последний визит</span><span class="v">${appts[0]?fmtDate(appts[0].date):'—'}</span></div>
+      </div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">ЗАМЕТКИ</div>
+        <textarea id="c-notes" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;min-height:60px">${esc(c.notes||'')}</textarea>
+        <button class="btn ghost small" id="c-save-notes" style="margin-top:8px">Сохранить заметку</button>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-weight:600">Голосовые</div>
+          <button class="btn ghost small" id="c-rec" style="flex:0 0 auto;padding:6px 12px">🎤 Записать</button>
+        </div>
+        ${myVoices.length ? myVoices.map(v => voiceRowHTML(v, c)).join('') : `<div class="sub">Пока нет записей</div>`}
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:4px">История визитов</div>
+        ${appts.length ? appts.map(a => `<div class="history-item"><span>${fmtDate(a.date)} · ${esc(a.service)}</span><span>${fmtMoney(a.price)}</span></div>`).join('') : `<div class="sub">Пока пусто</div>`}
+      </div>
+    </div>
+    <button class="fab" id="fab-add-client">+ Записать</button>
+  `;
+  document.getElementById('c-save-notes').onclick = () => {
+    c.notes = document.getElementById('c-notes').value; saveDB(db); alert('Сохранено');
+  };
+  document.getElementById('fab-add-client').onclick = () => openNewAppt(c.id);
+  document.getElementById('c-rec').onclick = () => openRecorder(c.id);
+  bindVoiceRows(myVoices);
+}
+
+function voiceRowHTML(v, client) {
+  return `<div class="voice-card" data-vid="${v.id}">
+    <div class="voice-top">
+      <button class="voice-play" data-vplay="${v.id}">▶</button>
+      <div class="voice-meta">
+        <div class="who">${client ? esc(client.name) : 'Без клиента'}</div>
+        <div class="when">${fmtDateTime(v.createdAt)} · ${fmtDur(v.duration)} · ${fmtBytes(v.size)}</div>
+      </div>
+      <button class="voice-del" data-vdel="${v.id}" title="Удалить">✕</button>
+    </div>
+  </div>`;
+}
+
+let currentAudio = null, currentAudioId = null;
+function bindVoiceRows() {
+  document.querySelectorAll('[data-vplay]').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.vplay;
+      if (currentAudio && currentAudioId === id && !currentAudio.paused) { currentAudio.pause(); return; }
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      const all = await idbGetAll();
+      const v = all.find(x => x.id === id); if (!v) return;
+      const url = URL.createObjectURL(v.blob);
+      currentAudio = new Audio(url); currentAudioId = id;
+      document.querySelectorAll('.voice-play').forEach(b => { b.classList.remove('playing'); b.textContent = '▶'; });
+      btn.classList.add('playing'); btn.textContent = '❚❚';
+      currentAudio.onended = () => {
+        btn.classList.remove('playing'); btn.textContent = '▶';
+        URL.revokeObjectURL(url); currentAudio = null; currentAudioId = null;
+      };
+      currentAudio.play();
+    };
+  });
+  document.querySelectorAll('[data-vdel]').forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm('Удалить голосовую заметку?')) return;
+      await idbDelete(btn.dataset.vdel); render();
+    };
+  });
+}
+
+async function renderVoice(header, view) {
+  header.innerHTML = `<h1>Заметки</h1>`;
+  const voices = (await idbGetAll()).sort((a,b)=>b.createdAt - a.createdAt);
+  const totalBytes = voices.reduce((s,v)=>s+(v.size||0),0);
+  view.innerHTML = `
+    <div style="padding:0 16px 12px;color:var(--muted);font-size:13px">
+      ${voices.length} ${plural(voices.length,'запись','записи','записей')} · ${fmtBytes(totalBytes)} · только на этом устройстве
+    </div>
+    <div class="list">
+      ${voices.length ? voices.map(v => {
+        const c = v.clientId ? db.clients.find(x => x.id === v.clientId) : null;
+        return voiceRowHTML(v, c);
+      }).join('') : `<div class="empty">Голосовых пока нет.<br>Нажмите 🎤 и скажите что-нибудь</div>`}
+    </div>
+    <button class="fab" id="fab-rec">🎤 Записать</button>
+  `;
+  bindVoiceRows();
+  document.getElementById('fab-rec').onclick = () => openRecorder(null);
+}
+
+function renderMoney(header, view) {
+  header.innerHTML = `<h1>Деньги</h1>`;
+  const t = todayISO(), mk = monthKey(t);
+  const paidToday = db.appointments.filter(a => a.date === t && a.paid).reduce((s,a)=>s+(a.price||0),0);
+  const paidMonth = db.appointments.filter(a => monthKey(a.date) === mk && a.paid).reduce((s,a)=>s+(a.price||0),0);
+  const unpaid = db.appointments.filter(a => !a.paid && a.date <= t);
+  const unpaidSum = unpaid.reduce((s,a)=>s+(a.price||0),0);
+  view.innerHTML = `
+    <div class="money-grid">
+      <div class="money-tile"><div class="k">Сегодня (оплачено)</div><div class="v">${fmtMoney(paidToday)}</div></div>
+      <div class="money-tile"><div class="k">Этот месяц</div><div class="v">${fmtMoney(paidMonth)}</div></div>
+      <div class="money-tile full ${unpaidSum?'warn':''}">
+        <div class="k">Не оплачено (прошедшие записи)</div>
+        <div class="v">${fmtMoney(unpaidSum)}</div>
+        ${unpaid.length ? `<div class="sub" style="margin-top:6px">${unpaid.length} ${plural(unpaid.length,'запись','записи','записей')}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+/* ---------- модалки ---------- */
+function closeModal() { document.getElementById('modal').innerHTML = ''; }
+function bindClose() {
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
+  const bg = document.querySelector('[data-close-bg]');
+  if (bg) bg.onclick = e => { if (e.target === bg) closeModal(); };
+}
+
+function openApptSheet(id) {
+  const a = db.appointments.find(x => x.id === id); if (!a) return;
+  const c = db.clients.find(x => x.id === a.clientId);
+  const m = document.getElementById('modal');
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>${esc(c?c.name:'Без имени')} · ${a.time}</h2>
+      <div class="kv"><span class="k">Услуга</span><span class="v">${esc(a.service)}</span></div>
+      <div class="kv"><span class="k">Цена</span><span class="v">${fmtMoney(a.price)}</span></div>
+      <div class="kv"><span class="k">Дата</span><span class="v">${fmtDate(a.date)}</span></div>
+      <div class="kv"><span class="k">Оплата</span><span class="v">${a.paid?'Оплачено':'Не оплачено'}</span></div>
+      <div class="kv"><span class="k">Напоминание</span><span class="v">${a.reminderOn ? (a.reminderSent?'Отправлено':'Запланировано') : 'Выключено'}</span></div>
+      <div class="actions">
+        <button class="btn primary small" data-act="toggle-paid">${a.paid?'Отметить неоплаченным':'✅ Отметить оплаченным'}</button>
+        ${a.reminderOn && !a.reminderSent && c ? `<button class="btn ghost small" data-act="send-reminder">📩 Отправить напоминание</button>` : ''}
+        ${c ? `<button class="btn ghost small" data-act="open-client">👤 Карточка клиента</button>` : ''}
+        <button class="btn danger small" data-act="delete">Удалить запись</button>
+      </div>
+      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
+    </div></div>`;
+  bindClose();
+  m.querySelector('[data-act="toggle-paid"]').onclick = () => { a.paid = !a.paid; saveDB(db); closeModal(); render(); };
+  const r = m.querySelector('[data-act="send-reminder"]');
+  if (r) r.onclick = () => {
+    a.reminderSent = true; saveDB(db);
+    const text = `Здравствуйте, ${c.name.split(' ')[0]}! Напоминаю о записи ${fmtDate(a.date)} в ${a.time} (${a.service}). Если планы изменились — напишите, пожалуйста.`;
+    closeModal(); showReminder(text, c);
+  };
+  const oc = m.querySelector('[data-act="open-client"]');
+  if (oc) oc.onclick = () => { closeModal(); state.tab='clients'; state.clientId=c.id; render(); };
+  m.querySelector('[data-act="delete"]').onclick = () => {
+    if (!confirm('Удалить запись?')) return;
+    db.appointments = db.appointments.filter(x => x.id !== id); saveDB(db); closeModal(); render();
+  };
+}
+
+function showReminder(text, c) {
+  const m = document.getElementById('modal');
+  const link = c.tg ? `https://t.me/${c.tg.replace('@','')}` : '';
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Напоминание</h2>
+      <div class="row"><textarea id="rem-text" style="min-height:110px">${esc(text)}</textarea></div>
+      <div class="btn-row">
+        <button class="btn ghost" id="rem-copy">📋 Копировать</button>
+        ${link ? `<a class="btn primary" href="${link}" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Открыть TG</a>` : ''}
+      </div>
+      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
+    </div></div>`;
+  bindClose();
+  document.getElementById('rem-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(text); alert('Скопировано'); }
+    catch(e) {
+      const t = document.getElementById('rem-text'); t.select();
+      document.execCommand('copy'); alert('Скопировано');
+    }
+  };
+}
+
+function openNewAppt(prefillClientId) {
+  const m = document.getElementById('modal');
+  const opts = db.clients.map(c => `<option value="${c.id}" ${c.id===prefillClientId?'selected':''}>${esc(c.name)}</option>`).join('');
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Новая запись</h2>
+      <div class="row"><label>Клиент</label>
+        <select id="f-client">${opts}<option value="__new">+ Новый клиент</option></select>
+      </div>
+      <div class="row" id="row-newclient" style="display:none">
+        <label>Имя нового клиента</label>
+        <input id="f-newclient" placeholder="Например, Анна Ковалёва">
+      </div>
+      <div class="row"><label>Услуга</label><input id="f-service" placeholder="Маникюр"></div>
+      <div class="row grid2">
+        <div><label>Цена, ₽</label><input id="f-price" type="number" inputmode="numeric" placeholder="2500"></div>
+        <div><label>Длительность, мин</label><input id="f-duration" type="number" inputmode="numeric" placeholder="90"></div>
+      </div>
+      <div class="row grid2">
+        <div><label>Дата</label><input id="f-date" type="date" value="${state.date}"></div>
+        <div><label>Время</label><input id="f-time" type="time" value="10:00"></div>
+      </div>
+      <div class="row"><label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">
+        <input type="checkbox" id="f-reminder" checked style="width:auto"> Напомнить за 24 часа
+      </label></div>
+      <div class="btn-row">
+        <button class="btn ghost" data-close>Отмена</button>
+        <button class="btn primary" id="f-save">Сохранить</button>
+      </div>
+    </div></div>`;
+  bindClose();
+  const sel = document.getElementById('f-client');
+  sel.onchange = () => { document.getElementById('row-newclient').style.display = sel.value === '__new' ? '' : 'none'; };
+  document.getElementById('f-save').onclick = () => {
+    let clientId = sel.value;
+    if (clientId === '__new') {
+      const name = document.getElementById('f-newclient').value.trim();
+      if (!name) { alert('Введите имя клиента'); return; }
+      const c = { id: uid(), name, phone:'', tg:'', notes:'' };
+      db.clients.push(c); clientId = c.id;
+    }
+    const service = document.getElementById('f-service').value.trim() || 'Услуга';
+    const price = +document.getElementById('f-price').value || 0;
+    const date = document.getElementById('f-date').value;
+    const time = document.getElementById('f-time').value || '10:00';
+    if (!date) { alert('Выберите дату'); return; }
+    db.appointments.push({ id: uid(), clientId, service, price, date, time,
+      paid:false, reminderOn: document.getElementById('f-reminder').checked, reminderSent:false });
+    saveDB(db);
+    state.date = date; state.tab = 'today';
+    closeModal(); render();
+  };
+}
+
+/* ---------- голосовой администратор ---------- */
+function openVoiceAdmin() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const m = document.getElementById('modal');
+
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Голосом создать запись</h2>
+      ${SR ? `
+        <div class="voice-rec">
+          <button class="rec-circle" id="va-btn">🎤</button>
+          <div class="rec-timer" id="va-timer">0:00</div>
+          <div class="rec-hint" id="va-hint">Нажмите и говорите. Например: «Анна, маникюр, завтра в десять»</div>
+        </div>
+        <div class="row" id="va-transcript-row" style="display:none">
+          <label>Что услышали</label>
+          <div class="transcript-box" id="va-transcript"></div>
+        </div>
+        <div class="row">
+          <label>Или введите текстом</label>
+          <input id="va-text" placeholder="Анна, маникюр, завтра в десять">
+        </div>
+      ` : `
+        <div class="err-box">Браузер не поддерживает распознавание речи. Откройте в Chrome на Android или введите текстом.</div>
+        <div class="row"><label>Текст</label><input id="va-text" placeholder="Анна, маникюр, завтра в десять"></div>
+      `}
+      <div class="btn-row">
+        <button class="btn ghost" data-close>Отмена</button>
+        <button class="btn primary" id="va-parse">Разобрать</button>
+      </div>
+    </div></div>`;
+  bindClose();
+
+  let recognition = null, listening = false, timerInt = null, startTs = 0;
+  const btn = document.getElementById('va-btn');
+  const timerEl = document.getElementById('va-timer');
+  const hintEl = document.getElementById('va-hint');
+  const transcriptRow = document.getElementById('va-transcript-row');
+  const transcriptEl = document.getElementById('va-transcript');
+  const textInput = document.getElementById('va-text');
+
+  function stopListening() {
+    listening = false;
+    clearInterval(timerInt);
+    if (btn) { btn.classList.remove('recording'); btn.textContent = '🎤'; }
+  }
+
+  if (SR && btn) {
+    btn.onclick = () => {
+      if (listening) { recognition && recognition.stop(); return; }
+      recognition = new SR();
+      recognition.lang = 'ru-RU';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      let finalText = '';
+
+      recognition.onresult = (e) => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) finalText += t;
+          else interim += t;
+        }
+        transcriptRow.style.display = '';
+        transcriptEl.textContent = (finalText + interim).trim() || '…';
+      };
+      recognition.onerror = (e) => {
+        hintEl.innerHTML = `<span style="color:var(--red)">Ошибка: ${e.error}</span>`;
+        stopListening();
+      };
+      recognition.onend = () => {
+        stopListening();
+        if (finalText) {
+          textInput.value = finalText.trim();
+          hintEl.textContent = 'Готово. Нажмите «Разобрать» или запишите заново.';
+        }
+      };
+      try {
+        recognition.start();
+        listening = true;
+        startTs = Date.now();
+        btn.classList.add('recording');
+        btn.textContent = '■';
+        hintEl.textContent = 'Слушаю…';
+        timerInt = setInterval(() => { timerEl.textContent = fmtDur((Date.now()-startTs)/1000); }, 200);
+      } catch(e) {
+        hintEl.innerHTML = `<span style="color:var(--red)">Не удалось запустить микрофон.</span>`;
+      }
+    };
+  }
+
+  document.getElementById('va-parse').onclick = () => {
+    const text = (textInput.value || '').trim();
+    if (!text) { alert('Скажите или введите фразу'); return; }
+    openVoiceDraft(parseVoice(text));
+  };
+}
+
+function openVoiceDraft(parsed) {
+  const m = document.getElementById('modal');
+  const matched = parsed.name
+    ? db.clients.find(c => c.name.toLowerCase().includes(parsed.name.toLowerCase()))
+    : null;
+  const dateVal = parsed.date || state.date || todayISO();
+  const timeVal = parsed.time || '10:00';
+  const serviceVal = parsed.service || 'Маникюр';
+  const priceVal = parsed.price || 2500;
+
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Проверьте запись</h2>
+      <div class="row" style="background:#f6f7f9;padding:10px;border-radius:10px;font-size:13px;color:var(--muted)">
+        «${esc(parsed.rawText)}»
+      </div>
+      <div class="row">
+        <label>Клиент</label>
+        <input id="vd-name" value="${esc(parsed.name||'')}" placeholder="Имя клиента">
+        <div id="vd-client-hint" class="hint-${matched?'green':'muted'}">
+          ${matched ? '✓ Найден: ' + esc(matched.name) : (parsed.name ? 'Новый клиент — будет создан' : 'Введите имя')}
+        </div>
+      </div>
+      <div class="row"><label>Услуга</label>
+        <input id="vd-service" value="${esc(serviceVal)}">
+      </div>
+      <div class="row grid2">
+        <div><label>Цена, ₽</label><input id="vd-price" type="number" value="${priceVal}"></div>
+        <div><label>Длительность, мин</label><input id="vd-duration" type="number" value="90"></div>
+      </div>
+      <div class="row grid2">
+        <div><label>Дата</label><input id="vd-date" type="date" value="${dateVal}"></div>
+        <div><label>Время</label><input id="vd-time" type="time" value="${timeVal}"></div>
+      </div>
+      <div class="row"><label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">
+        <input type="checkbox" id="vd-reminder" checked style="width:auto"> Напомнить за 24 часа
+      </label></div>
+      <div class="btn-row">
+        <button class="btn ghost" data-close>Отмена</button>
+        <button class="btn primary" id="vd-save">Сохранить</button>
+      </div>
+    </div></div>`;
+  bindClose();
+
+  const nameInput = document.getElementById('vd-name');
+  const hintEl = document.getElementById('vd-client-hint');
+  nameInput.oninput = () => {
+    const q = nameInput.value.trim().toLowerCase();
+    const found = q ? db.clients.find(c => c.name.toLowerCase().includes(q)) : null;
+    if (found) {
+      hintEl.className = 'hint-green';
+      hintEl.textContent = '✓ Найден: ' + found.name;
+    } else {
+      hintEl.className = 'hint-muted';
+      hintEl.textContent = q ? 'Новый клиент — будет создан' : 'Введите имя';
+    }
+  };
+
+  document.getElementById('vd-save').onclick = () => {
+    const name = nameInput.value.trim();
+    if (!name) { alert('Введите имя клиента'); return; }
+    let client = db.clients.find(c => c.name.toLowerCase().includes(name.toLowerCase()));
+    if (!client) {
+      client = { id: uid(), name, phone:'', tg:'', notes:'' };
+      db.clients.push(client);
+    }
+    const service = document.getElementById('vd-service').value.trim() || 'Услуга';
+    const price = +document.getElementById('vd-price').value || 0;
+    const date = document.getElementById('vd-date').value;
+    const time = document.getElementById('vd-time').value || '10:00';
+    const reminderOn = document.getElementById('vd-reminder').checked;
+    if (!date) { alert('Выберите дату'); return; }
+
+    db.appointments.push({
+      id: uid(), clientId: client.id, service, price, date, time,
+      paid:false, reminderOn, reminderSent:false
+    });
+    saveDB(db);
+    state.date = date;
+    state.tab = 'today';
+    closeModal();
+    render();
+  };
+}
+
+/* ---------- аудиозаметки ---------- */
+function pickMimeType() {
+  const types = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];
+  for (const t of types) if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+  return '';
+}
+
+function openRecorder(prefillClientId) {
+  const m = document.getElementById('modal');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+    m.innerHTML = `<div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Голосовая заметка</h2>
+      <div class="err-box">Браузер не поддерживает запись. Нужен Chrome, Safari 14.3+ или Firefox. И обязательно HTTPS.</div>
+      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
+    </div></div>`;
+    bindClose(); return;
+  }
+  if (!window.isSecureContext) {
+    m.innerHTML = `<div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Голосовая заметка</h2>
+      <div class="err-box">Микрофон работает только по HTTPS. Откройте приложение по ссылке, а не файлом.</div>
+      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
+    </div></div>`;
+    bindClose(); return;
+  }
+
+  const clientOpts = db.clients.map(c => `<option value="${c.id}" ${c.id===prefillClientId?'selected':''}>${esc(c.name)}</option>`).join('');
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Голосовая заметка</h2>
+      <div class="voice-rec">
+        <button class="rec-circle" id="rec-btn">🎤</button>
+        <div class="rec-timer" id="rec-timer">0:00</div>
+        <div class="rec-hint" id="rec-hint">Нажмите на микрофон и говорите</div>
+      </div>
+      <div class="row" id="row-client" style="${prefillClientId?'display:none':''}">
+        <label>Привязать к клиенту (необязательно)</label>
+        <select id="rec-client"><option value="">— без клиента —</option>${clientOpts}</select>
+      </div>
+      <div class="actions">
+        <button class="btn primary small" id="rec-save" style="display:none">💾 Сохранить</button>
+        <button class="btn ghost small" id="rec-rerecord" style="display:none">↻ Записать заново</button>
+      </div>
+      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
+    </div></div>`;
+  bindClose();
+
+  const btn = document.getElementById('rec-btn');
+  const timer = document.getElementById('rec-timer');
+  const hint = document.getElementById('rec-hint');
+  const saveBtn = document.getElementById('rec-save');
+  const reBtn = document.getElementById('rec-rerecord');
+  const rowClient = document.getElementById('row-client');
+
+  let st = { mediaRecorder:null, stream:null, chunks:[], startTs:0, blob:null, mimeType:'', timerInt:null, duration:0, clientId:prefillClientId||null };
+
+  function reset() {
+    st = { mediaRecorder:null, stream:null, chunks:[], startTs:0, blob:null, mimeType:'', timerInt:null, duration:0, clientId:prefillClientId||null };
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+    timer.textContent = '0:00';
+    hint.textContent = 'Нажмите на микрофон и говорите';
+    saveBtn.style.display = 'none';
+    reBtn.style.display = 'none';
+    rowClient.style.display = prefillClientId ? 'none' : '';
+  }
+  reset();
+
+  btn.onclick = async () => {
+    if (st.mediaRecorder && st.mediaRecorder.state === 'recording') { st.mediaRecorder.stop(); return; }
+    if (st.blob) reset();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      st.stream = stream;
+      const mimeType = pickMimeType();
+      st.mimeType = mimeType || 'audio/webm';
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      st.mediaRecorder = mr;
+      st.chunks = [];
+      mr.ondataavailable = e => { if (e.data && e.data.size > 0) st.chunks.push(e.data); };
+      mr.onstop = () => {
+        clearInterval(st.timerInt);
+        st.duration = (Date.now() - st.startTs) / 1000;
+        st.blob = new Blob(st.chunks, { type: st.mimeType });
+        stream.getTracks().forEach(t => t.stop());
+        btn.classList.remove('recording');
+        btn.textContent = '▶';
+        hint.textContent = `Записано ${fmtDur(st.duration)} · ${fmtBytes(st.blob.size)}`;
+        saveBtn.style.display = '';
+        reBtn.style.display = '';
+        btn.onclick = () => {
+          const url = URL.createObjectURL(st.blob);
+          const a = new Audio(url);
+          a.onended = () => URL.revokeObjectURL(url);
+          a.play();
+        };
+      };
+      mr.start();
+      st.startTs = Date.now();
+      btn.classList.add('recording');
+      btn.textContent = '■';
+      hint.textContent = 'Идёт запись… Нажмите ■, чтобы остановить';
+      st.timerInt = setInterval(() => { timer.textContent = fmtDur((Date.now()-st.startTs)/1000); }, 200);
+    } catch (err) {
+      hint.innerHTML = `<span style="color:var(--red)">Нет доступа к микрофону.</span>`;
+    }
+  };
+
+  reBtn.onclick = () => reset();
+
+  saveBtn.onclick = async () => {
+    if (!st.blob) return;
+    const sel = document.getElementById('rec-client');
+    const clientId = (prefillClientId || (sel ? sel.value : '')) || null;
+    try {
+      await idbAdd({
+        id: uid(), blob: st.blob, mimeType: st.mimeType, clientId,
+        createdAt: Date.now(), duration: st.duration, size: st.blob.size,
+      });
+      closeModal();
+      if (state.tab === 'voice' || (state.tab === 'clients' && state.clientId === clientId)) render();
+      else {
+        const t = document.createElement('div');
+        t.textContent = '✅ Заметка сохранена';
+        t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1c1f24;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:100;';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2000);
+      }
+    } catch (e) { alert('Не удалось сохранить: ' + e.message); }
+  };
+}
+
+/* ---------- старт ---------- */
+document.getElementById('tabs').onclick = e => {
+  const b = e.target.closest('button[data-tab]'); if (!b) return;
+  state.tab = b.dataset.tab; state.clientId = null; render();
+};
+
+(async () => {
+  db = loadDB();
+  state.date = todayISO();
+  try { idb = await openIDB(); } catch(e) { console.error('IndexedDB недоступен', e); }
+  render();
+})();
+</script>
+</body>
+</html>
