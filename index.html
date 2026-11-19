@@ -387,7 +387,10 @@ function renderToday(header, view) {
 if (state.tab === 'today') {
     state.date = todayISO();
   }
-  const date = state.date;
+ if (state.tab === 'today') {
+  state.date = todayISO();
+} 
+const date = state.date;
   const list = db.appointments.filter(a => a.date === date).sort((x,y)=>x.time.localeCompare(y.time));
   const total = list.reduce((s,a)=>s+(a.price||0),0);
   const isToday = date === todayISO();
@@ -1010,5 +1013,10 @@ document.getElementById('tabs').onclick = e => {
   render();
 })();
 </script>
-</body>
+<link rel="manifest" href="/my-crm/manifest.webmanifest">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/my-crm/sw.js');
+  }
+</script></body>
 </html>
