@@ -384,7 +384,9 @@ function apptCard(a) {
 function renderToday(header, view) {
   header.innerHTML = `<h1>Записи</h1><button class="hdr-btn" id="hdr-mic" title="Голосом создать запись">🎤</button>`;
   document.getElementById('hdr-mic').onclick = openVoiceAdmin;
-
+if (state.tab === 'today') {
+    state.date = todayISO();
+  }
   const date = state.date;
   const list = db.appointments.filter(a => a.date === date).sort((x,y)=>x.time.localeCompare(y.time));
   const total = list.reduce((s,a)=>s+(a.price||0),0);
