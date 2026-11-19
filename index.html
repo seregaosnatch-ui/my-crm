@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f6f7f9">
+<link rel="manifest" href="/my-crm/manifest.webmanifest">
 <title>Записи</title>
 <style>
   :root {
@@ -137,12 +138,11 @@ const IDB_STORE = 'notes';
 let db, state = { tab:'today', date:'', clientId:null };
 let idb = null;
 
-/* ---------- утилиты ---------- */
-function todayISO() { 
+function todayISO() {
   const d = new Date();
   return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
 }
-function isoDate(d) { 
+function isoDate(d) {
   return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
 }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -180,7 +180,6 @@ function plural(n,a,b,c) {
   return c;
 }
 
-/* ---------- хранилище ---------- */
 function loadDB() {
   const raw = localStorage.getItem(LS_KEY);
   if (raw) { try { return JSON.parse(raw); } catch(e){} }
@@ -200,13 +199,10 @@ function seed() {
       {id:'a1', clientId:'c1', service:'Маникюр', price:2500, date:d(0), time:'10:00', paid:true, reminderOn:true, reminderSent:true},
       {id:'a2', clientId:'c2', service:'Брови', price:1800, date:d(0), time:'12:30', paid:false, reminderOn:true, reminderSent:false},
       {id:'a3', clientId:'c3', service:'Маникюр', price:2500, date:d(0), time:'15:00', paid:false, reminderOn:true, reminderSent:true},
-      {id:'a4', clientId:'c1', service:'Маникюр', price:2500, date:d(-32), time:'11:00', paid:true, reminderOn:false, reminderSent:false},
-      {id:'a5', clientId:'c1', service:'Маникюр', price:2500, date:d(-40), time:'11:00', paid:true, reminderOn:false, reminderSent:false},
     ]
   };
 }
 
-/* ---------- IndexedDB ---------- */
 function openIDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(IDB_NAME, 1);
@@ -243,7 +239,6 @@ function idbDelete(id) {
   });
 }
 
-/* ---------- парсер голоса ---------- */
 const MONTHS_GEN = {
   'января':1,'февраля':2,'марта':3,'апреля':4,'мая':5,'июня':6,
   'июля':7,'августа':8,'сентября':9,'октября':10,'ноября':11,'декабря':12
@@ -337,7 +332,7 @@ function parseVoice(text) {
     }
   }
 
-  // Имя: первый фрагмент до запятой, первое слово
+  // Имя
   const chunks = text.split(',').map(x => x.trim()).filter(Boolean);
   if (chunks.length) {
     const firstWord = chunks[0].split(/\s+/)[0];
@@ -347,11 +342,10 @@ function parseVoice(text) {
   return result;
 }
 
-/* ---------- рендер ---------- */
 function render() {
   const tabs = document.getElementById('tabs');
   tabs.innerHTML = [
-    {id:'today', ico:'📅', label:'Сегодня'},
+    {id:'today', ico:'📋', label:'Сегодня'},
     {id:'clients', ico:'👥', label:'Клиенты'},
     {id:'voice', ico:'🎤', label:'Заметки'},
     {id:'money', ico:'💰', label:'Деньги'},
@@ -385,8 +379,7 @@ function renderToday(header, view) {
   header.innerHTML = `<h1>Записи</h1><button class="hdr-btn" id="hdr-mic" title="Голосом создать запись">🎤</button>`;
   document.getElementById('hdr-mic').onclick = openVoiceAdmin;
 
- 
-const date = state.date;
+  const date = state.date;
   const list = db.appointments.filter(a => a.date === date).sort((x,y)=>x.time.localeCompare(y.time));
   const total = list.reduce((s,a)=>s+(a.price||0),0);
   const isToday = date === todayISO();
@@ -477,7 +470,7 @@ async function renderClientCard(header, view) {
   };
   document.getElementById('fab-add-client').onclick = () => openNewAppt(c.id);
   document.getElementById('c-rec').onclick = () => openRecorder(c.id);
-  bindVoiceRows(myVoices);
+  bindVoiceRows();
 }
 
 function voiceRowHTML(v, client) {
@@ -527,7 +520,7 @@ async function renderVoice(header, view) {
   const totalBytes = voices.reduce((s,v)=>s+(v.size||0),0);
   view.innerHTML = `
     <div style="padding:0 16px 12px;color:var(--muted);font-size:13px">
-      ${voices.length} ${plural(voices.length,'запись','записи','записей')} · ${fmtBytes(totalBytes)} · только на этом устройстве
+      ${voices.length} ${plural(voices.length,'запись','записи','записей')} · ${fmtBytes(totalBytes)}
     </div>
     <div class="list">
       ${voices.length ? voices.map(v => {
@@ -560,7 +553,6 @@ function renderMoney(header, view) {
     </div>`;
 }
 
-/* ---------- модалки ---------- */
 function closeModal() { document.getElementById('modal').innerHTML = ''; }
 function bindClose() {
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
@@ -582,6 +574,7 @@ function openApptSheet(id) {
       <div class="kv"><span class="k">Напоминание</span><span class="v">${a.reminderOn ? (a.reminderSent?'Отправлено':'Запланировано') : 'Выключено'}</span></div>
       <div class="actions">
         <button class="btn primary small" data-act="toggle-paid">${a.paid?'Отметить неоплаченным':'✅ Отметить оплаченным'}</button>
+        <button class="btn ghost small" data-act="edit">✏️ Редактировать</button>
         ${a.reminderOn && !a.reminderSent && c ? `<button class="btn ghost small" data-act="send-reminder">📩 Отправить напоминание</button>` : ''}
         ${c ? `<button class="btn ghost small" data-act="open-client">👤 Карточка клиента</button>` : ''}
         <button class="btn danger small" data-act="delete">Удалить запись</button>
@@ -590,6 +583,7 @@ function openApptSheet(id) {
     </div></div>`;
   bindClose();
   m.querySelector('[data-act="toggle-paid"]').onclick = () => { a.paid = !a.paid; saveDB(db); closeModal(); render(); };
+  m.querySelector('[data-act="edit"]').onclick = () => { closeModal(); openEditAppt(id); };
   const r = m.querySelector('[data-act="send-reminder"]');
   if (r) r.onclick = () => {
     a.reminderSent = true; saveDB(db);
@@ -601,6 +595,36 @@ function openApptSheet(id) {
   m.querySelector('[data-act="delete"]').onclick = () => {
     if (!confirm('Удалить запись?')) return;
     db.appointments = db.appointments.filter(x => x.id !== id); saveDB(db); closeModal(); render();
+  };
+}
+
+function openEditAppt(id) {
+  const a = db.appointments.find(x => x.id === id); if (!a) return;
+  const m = document.getElementById('modal');
+  const opts = db.clients.map(c => `<option value="${c.id}" ${c.id===a.clientId?'selected':''}>${esc(c.name)}</option>`).join('');
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Редактировать запись</h2>
+      <div class="row"><label>Клиент</label><select id="e-client">${opts}</select></div>
+      <div class="row"><label>Услуга</label><input id="e-service" value="${esc(a.service)}"></div>
+      <div class="row grid2">
+        <div><label>Цена, ₽</label><input id="e-price" type="number" value="${a.price||0}"></div>
+        <div><label>Дата</label><input id="e-date" type="date" value="${a.date}"></div>
+      </div>
+      <div class="row"><label>Время</label><input id="e-time" type="time" value="${a.time}"></div>
+      <div class="btn-row">
+        <button class="btn ghost" data-close>Отмена</button>
+        <button class="btn primary" id="e-save">Сохранить</button>
+      </div>
+    </div></div>`;
+  bindClose();
+  document.getElementById('e-save').onclick = () => {
+    a.clientId = document.getElementById('e-client').value;
+    a.service = document.getElementById('e-service').value.trim() || 'Услуга';
+    a.price = +document.getElementById('e-price').value || 0;
+    a.date = document.getElementById('e-date').value;
+    a.time = document.getElementById('e-time').value || '10:00';
+    saveDB(db); closeModal(); render();
   };
 }
 
@@ -643,12 +667,9 @@ function openNewAppt(prefillClientId) {
       <div class="row"><label>Услуга</label><input id="f-service" placeholder="Маникюр"></div>
       <div class="row grid2">
         <div><label>Цена, ₽</label><input id="f-price" type="number" inputmode="numeric" placeholder="2500"></div>
-        <div><label>Длительность, мин</label><input id="f-duration" type="number" inputmode="numeric" placeholder="90"></div>
-      </div>
-      <div class="row grid2">
         <div><label>Дата</label><input id="f-date" type="date" value="${state.date}"></div>
-        <div><label>Время</label><input id="f-time" type="time" value="10:00"></div>
       </div>
+      <div class="row"><label>Время</label><input id="f-time" type="time" value="10:00"></div>
       <div class="row"><label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">
         <input type="checkbox" id="f-reminder" checked style="width:auto"> Напомнить за 24 часа
       </label></div>
@@ -681,7 +702,6 @@ function openNewAppt(prefillClientId) {
   };
 }
 
-/* ---------- голосовой администратор ---------- */
 function openVoiceAdmin() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const m = document.getElementById('modal');
@@ -807,12 +827,9 @@ function openVoiceDraft(parsed) {
       </div>
       <div class="row grid2">
         <div><label>Цена, ₽</label><input id="vd-price" type="number" value="${priceVal}"></div>
-        <div><label>Длительность, мин</label><input id="vd-duration" type="number" value="90"></div>
-      </div>
-      <div class="row grid2">
         <div><label>Дата</label><input id="vd-date" type="date" value="${dateVal}"></div>
-        <div><label>Время</label><input id="vd-time" type="time" value="${timeVal}"></div>
       </div>
+      <div class="row"><label>Время</label><input id="vd-time" type="time" value="${timeVal}"></div>
       <div class="row"><label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">
         <input type="checkbox" id="vd-reminder" checked style="width:auto"> Напомнить за 24 часа
       </label></div>
@@ -851,7 +868,6 @@ function openVoiceDraft(parsed) {
     const time = document.getElementById('vd-time').value || '10:00';
     const reminderOn = document.getElementById('vd-reminder').checked;
     if (!date) { alert('Выберите дату'); return; }
-
     db.appointments.push({
       id: uid(), clientId: client.id, service, price, date, time,
       paid:false, reminderOn, reminderSent:false
@@ -864,7 +880,6 @@ function openVoiceDraft(parsed) {
   };
 }
 
-/* ---------- аудиозаметки ---------- */
 function pickMimeType() {
   const types = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];
   for (const t of types) if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
@@ -876,20 +891,11 @@ function openRecorder(prefillClientId) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
     m.innerHTML = `<div class="sheet-bg" data-close-bg><div class="sheet">
       <h2>Голосовая заметка</h2>
-      <div class="err-box">Браузер не поддерживает запись. Нужен Chrome, Safari 14.3+ или Firefox. И обязательно HTTPS.</div>
+      <div class="err-box">Браузер не поддерживает запись.</div>
       <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
     </div></div>`;
     bindClose(); return;
   }
-  if (!window.isSecureContext) {
-    m.innerHTML = `<div class="sheet-bg" data-close-bg><div class="sheet">
-      <h2>Голосовая заметка</h2>
-      <div class="err-box">Микрофон работает только по HTTPS. Откройте приложение по ссылке, а не файлом.</div>
-      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
-    </div></div>`;
-    bindClose(); return;
-  }
-
   const clientOpts = db.clients.map(c => `<option value="${c.id}" ${c.id===prefillClientId?'selected':''}>${esc(c.name)}</option>`).join('');
   m.innerHTML = `
     <div class="sheet-bg" data-close-bg><div class="sheet">
@@ -918,10 +924,10 @@ function openRecorder(prefillClientId) {
   const reBtn = document.getElementById('rec-rerecord');
   const rowClient = document.getElementById('row-client');
 
-  let st = { mediaRecorder:null, stream:null, chunks:[], startTs:0, blob:null, mimeType:'', timerInt:null, duration:0, clientId:prefillClientId||null };
+  let st = { mediaRecorder:null, stream:null, chunks:[], startTs:0, blob:null, mimeType:'', timerInt:null, duration:0 };
 
   function reset() {
-    st = { mediaRecorder:null, stream:null, chunks:[], startTs:0, blob:null, mimeType:'', timerInt:null, duration:0, clientId:prefillClientId||null };
+    st = { mediaRecorder:null, stream:null, chunks:[], startTs:0, blob:null, mimeType:'', timerInt:null, duration:0 };
     btn.classList.remove('recording');
     btn.textContent = '🎤';
     timer.textContent = '0:00';
@@ -996,25 +1002,25 @@ function openRecorder(prefillClientId) {
   };
 }
 
-/* ---------- старт ---------- */
 document.getElementById('tabs').onclick = e => {
   const b = e.target.closest('button[data-tab]'); if (!b) return;
-  state.tab = b.dataset.tab; state.clientId = null;
-  if (state.tab === 'today') state.date = todayISO();
+  const newTab = b.dataset.tab;
+  if (newTab === state.tab && newTab !== 'today') return;
+  state.tab = newTab;
+  state.clientId = null;
+  if (newTab === 'today') state.date = todayISO();
   render();
 };
+
 (async () => {
   db = loadDB();
   state.date = todayISO();
   try { idb = await openIDB(); } catch(e) { console.error('IndexedDB недоступен', e); }
   render();
-})();
-</script>
-<link rel="manifest" href="/my-crm/manifest.webmanifest">
-<script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/my-crm/sw.js');
+    try { await navigator.serviceWorker.register('/my-crm/sw.js'); } catch(e) {}
   }
+})();
 </script>
 </body>
 </html>
