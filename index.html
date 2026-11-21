@@ -22,10 +22,25 @@
   header h1 { font-size:18px; margin:0; flex:1; font-weight:700; }
   .hdr-btn { border:1px solid var(--line); background:var(--card);
     width:40px; height:40px; border-radius:12px; font-size:18px; cursor:pointer; }
+
+  /* горизонтальная полоса дней */
+  .week-strip { display:flex; gap:6px; padding:0 16px 10px; overflow-x:auto;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .week-strip::-webkit-scrollbar { display:none; }
+  .day-btn { flex:0 0 auto; min-width:52px; padding:8px 4px; border-radius:12px;
+    border:1px solid var(--line); background:var(--card); cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:2px; font-family:inherit; }
+  .day-btn .wd { font-size:11px; color:var(--muted); font-weight:600; }
+  .day-btn .d { font-size:16px; font-weight:700; color:var(--text); }
+  .day-btn .cnt { font-size:10px; color:var(--accent); font-weight:600; min-height:12px; }
+  .day-btn.active { background:var(--accent); border-color:var(--accent); }
+  .day-btn.active .wd, .day-btn.active .d, .day-btn.active .cnt { color:#fff; }
+  .day-btn.today .d { color:var(--accent); }
+  .day-btn.today.active .d { color:#fff; }
+
   .datebar { display:flex; align-items:center; gap:8px; padding:0 16px 10px; }
-  .datebar button { border:1px solid var(--line); background:var(--card);
-    width:34px; height:34px; border-radius:10px; font-size:16px; color:var(--text); }
   .datebar .label { flex:1; text-align:center; font-weight:600; font-size:14px; }
+
   .list { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
   .card { background:var(--card); border-radius:var(--radius); padding:14px;
     border:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
@@ -43,6 +58,15 @@
     border-radius:var(--radius); border:1px solid var(--line);
     display:flex; justify-content:space-between; align-items:center; font-size:14px; }
   .summary b { font-size:16px; }
+
+  .remind-block { margin:14px 16px 0; padding:14px; background:#fff8e6;
+    border-radius:var(--radius); border:1px solid #f0e0b0; }
+  .remind-block .t { font-size:12px; font-weight:700; color:var(--orange); margin-bottom:8px; }
+  .remind-item { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:14px; }
+  .remind-item .who { flex:1; }
+  .remind-item button { background:var(--orange); color:#fff; border:none;
+    padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; }
+
   .fab { position:fixed; bottom:92px; right:max(16px, calc(50% - 224px));
     background:var(--accent); color:#fff; border:none; padding:14px 20px;
     border-radius:999px; font-size:15px; font-weight:600;
@@ -121,6 +145,21 @@
     font-size:14px; background:#f6f7f9; min-height:44px; color:var(--text); }
   .hint-green { font-size:12px; margin-top:6px; color:var(--green); }
   .hint-muted { font-size:12px; margin-top:6px; color:var(--muted); }
+
+  /* настройки */
+  .settings-section { padding:0 16px 14px; }
+  .settings-section h3 { font-size:13px; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.5px; margin:16px 0 8px; font-weight:700; }
+  .settings-card { background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px; margin-bottom:10px; }
+  .settings-card .desc { font-size:13px; color:var(--muted); margin-bottom:10px; }
+  .vars { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .var-btn { font-size:12px; padding:4px 8px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg); color:var(--text); font-family:inherit; cursor:pointer; font-weight:600; }
+  .menu-row { display:flex; align-items:center; justify-content:space-between;
+    padding:14px; background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); margin-bottom:10px; font-size:15px; cursor:pointer; }
+  .menu-row .arr { color:var(--muted); }
 </style>
 </head>
 <body>
@@ -138,6 +177,8 @@ const IDB_STORE = 'notes';
 let db, state = { tab:'today', date:'', clientId:null };
 let idb = null;
 
+const DEFAULT_TEMPLATE = '{имя}, добрый день! Напоминаю о записи {дата} в {время} на {услуга}. Если планы изменились — напишите, пожалуйста.';
+
 function todayISO() {
   const d = new Date();
   return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
@@ -154,6 +195,11 @@ function shiftDate(iso, days) {
 function fmtDate(iso) {
   const d = new Date(iso + 'T12:00:00');
   const m = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  return d.getDate() + ' ' + m[d.getMonth()];
+}
+function fmtDateFull(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  const m = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
   return d.getDate() + ' ' + m[d.getMonth()];
 }
 function fmtDateTime(ts) {
@@ -179,10 +225,21 @@ function plural(n,a,b,c) {
   if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return b;
   return c;
 }
+function weekdayShort(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()];
+}
 
 function loadDB() {
   const raw = localStorage.getItem(LS_KEY);
-  if (raw) { try { return JSON.parse(raw); } catch(e){} }
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed.settings) parsed.settings = {};
+      if (!parsed.settings.reminderTemplate) parsed.settings.reminderTemplate = DEFAULT_TEMPLATE;
+      return parsed;
+    } catch(e){}
+  }
   const d = seed(); saveDB(d); return d;
 }
 function saveDB(x) { localStorage.setItem(LS_KEY, JSON.stringify(x)); }
@@ -190,15 +247,17 @@ function seed() {
   const t = todayISO();
   const d = n => shiftDate(t, n);
   return {
+    settings: { reminderTemplate: DEFAULT_TEMPLATE },
     clients: [
-      {id:'c1', name:'Анна Ковалёва', phone:'+7 999 123-45-67', tg:'@anna_tg', notes:'Любит квадрат, аллергия на гель-лак X'},
-      {id:'c2', name:'Мария Смирнова', phone:'+7 999 222-33-44', tg:'@maria_s', notes:''},
-      {id:'c3', name:'Ольга Петрова', phone:'+7 999 555-66-77', tg:'', notes:'Приходит с ребёнком'},
+      {id:'c1', name:'Анна Ковалёва', phone:'+79991234567', tg:'@anna_tg', notes:'Любит квадрат, аллергия на гель-лак X'},
+      {id:'c2', name:'Мария Смирнова', phone:'+79992223344', tg:'@maria_s', notes:''},
+      {id:'c3', name:'Ольга Петрова', phone:'+79995556677', tg:'', notes:'Приходит с ребёнком'},
     ],
     appointments: [
       {id:'a1', clientId:'c1', service:'Маникюр', price:2500, date:d(0), time:'10:00', paid:true, reminderOn:true, reminderSent:true},
       {id:'a2', clientId:'c2', service:'Брови', price:1800, date:d(0), time:'12:30', paid:false, reminderOn:true, reminderSent:false},
       {id:'a3', clientId:'c3', service:'Маникюр', price:2500, date:d(0), time:'15:00', paid:false, reminderOn:true, reminderSent:true},
+      {id:'a4', clientId:'c1', service:'Маникюр', price:2500, date:d(1), time:'11:00', paid:false, reminderOn:true, reminderSent:false},
     ]
   };
 }
@@ -269,8 +328,6 @@ function parseVoice(text) {
   const result = { name:null, service:null, price:null, date:null, time:null, rawText:text };
   const lower = text.toLowerCase().replace(/ё/g,'е');
   const today = new Date(); today.setHours(0,0,0,0);
-
-  // Время
   const hasMorning = /утра|ночи/.test(lower);
   let m = lower.match(/в\s+(\d{1,2}):(\d{2})/);
   if (m) {
@@ -295,8 +352,6 @@ function parseVoice(text) {
       }
     }
   }
-
-  // Дата
   if (/послезавтра/.test(lower)) {
     result.date = isoDate(addDays(today, 2));
   } else if (/завтра/.test(lower)) {
@@ -322,8 +377,6 @@ function parseVoice(text) {
       }
     }
   }
-
-  // Услуга
   for (const s of SERVICES) {
     if (lower.includes(s)) {
       result.service = s[0].toUpperCase() + s.slice(1);
@@ -331,14 +384,11 @@ function parseVoice(text) {
       break;
     }
   }
-
-  // Имя
   const chunks = text.split(',').map(x => x.trim()).filter(Boolean);
   if (chunks.length) {
     const firstWord = chunks[0].split(/\s+/)[0];
     if (firstWord && /^[А-ЯЁA-Z]/.test(firstWord)) result.name = firstWord;
   }
-
   return result;
 }
 
@@ -347,16 +397,16 @@ function render() {
   tabs.innerHTML = [
     {id:'today', ico:'📋', label:'Сегодня'},
     {id:'clients', ico:'👥', label:'Клиенты'},
-    {id:'voice', ico:'🎤', label:'Заметки'},
     {id:'money', ico:'💰', label:'Деньги'},
+    {id:'settings', ico:'⚙️', label:'Настройки'},
   ].map(t => `<button data-tab="${t.id}" class="${state.tab===t.id?'active':''}"><span class="ico">${t.ico}</span>${t.label}</button>`).join('');
 
   const header = document.getElementById('header');
   const view = document.getElementById('view');
   if (state.tab === 'today') renderToday(header, view);
   else if (state.tab === 'clients') renderClients(header, view);
-  else if (state.tab === 'voice') renderVoice(header, view);
-  else renderMoney(header, view);
+  else if (state.tab === 'money') renderMoney(header, view);
+  else renderSettings(header, view);
 }
 
 function apptCard(a) {
@@ -375,6 +425,29 @@ function apptCard(a) {
   </div>`;
 }
 
+function renderWeekStrip() {
+  const today = todayISO();
+  const start = today;
+  let html = '<div class="week-strip" id="week-strip">';
+  for (let i = 0; i < 7; i++) {
+    const iso = shiftDate(start, i);
+    const cnt = db.appointments.filter(a => a.date === iso).length;
+    const cls = [
+      'day-btn',
+      iso === state.date ? 'active' : '',
+      iso === today ? 'today' : ''
+    ].filter(Boolean).join(' ');
+    const label = i === 0 ? 'Сег' : weekdayShort(iso);
+    html += `<button class="${cls}" data-day="${iso}">
+      <span class="wd">${label}</span>
+      <span class="d">${new Date(iso+'T12:00:00').getDate()}</span>
+      <span class="cnt">${cnt ? cnt : ''}</span>
+    </button>`;
+  }
+  html += '</div>';
+  return html;
+}
+
 function renderToday(header, view) {
   header.innerHTML = `<h1>Записи</h1><button class="hdr-btn" id="hdr-mic" title="Голосом создать запись">🎤</button>`;
   document.getElementById('hdr-mic').onclick = openVoiceAdmin;
@@ -383,23 +456,47 @@ function renderToday(header, view) {
   const list = db.appointments.filter(a => a.date === date).sort((x,y)=>x.time.localeCompare(y.time));
   const total = list.reduce((s,a)=>s+(a.price||0),0);
   const isToday = date === todayISO();
+  const dateLabel = isToday ? 'Сегодня, ' + fmtDate(date) : fmtDateFull(date);
+
+  // блок "кому напомнить сегодня" — записи на завтра без отправленного напоминания
+  const tomorrow = shiftDate(todayISO(), 1);
+  const toRemind = db.appointments.filter(a => a.date === tomorrow && a.reminderOn && !a.reminderSent);
+  let remindBlock = '';
+  if (toRemind.length) {
+    const items = toRemind.map(a => {
+      const c = db.clients.find(x => x.id === a.clientId);
+      return `<div class="remind-item">
+        <span class="who">${esc(c?c.name:'—')} · ${a.time} · ${esc(a.service)}</span>
+        <button data-remind="${a.id}">Напомнить</button>
+      </div>`;
+    }).join('');
+    remindBlock = `<div class="remind-block">
+      <div class="t">🔔 КОМУ НАПОМНИТЬ СЕГОДНЯ (записи на завтра)</div>
+      ${items}
+    </div>`;
+  }
+
   view.innerHTML = `
-    <div class="datebar">
-      <button data-shift="-1">‹</button>
-      <div class="label">${isToday?'Сегодня, ':''}${fmtDate(date)}</div>
-      <button data-shift="1">›</button>
-    </div>
+    ${renderWeekStrip()}
+    <div class="datebar"><div class="label">${dateLabel}</div></div>
+    ${remindBlock}
     <div class="list">
       ${list.length ? list.map(apptCard).join('') : `<div class="empty">На этот день записей нет.<br>Нажмите «+ Запись» или 🎤</div>`}
     </div>
     ${list.length ? `<div class="summary"><span>${list.length} ${plural(list.length,'запись','записи','записей')} на день</span><b>${fmtMoney(total)}</b></div>` : ''}
     <button class="fab" id="fab-add">+ Запись</button>
   `;
-  view.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => {
-    state.date = shiftDate(state.date, +b.dataset.shift); render();
+  view.querySelectorAll('[data-day]').forEach(b => b.onclick = () => {
+    state.date = b.dataset.day; render();
   });
   view.querySelectorAll('[data-appt]').forEach(el => el.onclick = () => openApptSheet(el.dataset.appt));
+  view.querySelectorAll('[data-remind]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation(); openSendReminder(b.dataset.remind);
+  });
   document.getElementById('fab-add').onclick = () => openNewAppt(null);
+  // проскроллить полосу к активному дню
+  const active = view.querySelector('.day-btn.active');
+  if (active) active.scrollIntoView({ inline:'center', block:'nearest' });
 }
 
 function renderClients(header, view) {
@@ -509,29 +606,11 @@ function bindVoiceRows() {
   document.querySelectorAll('[data-vdel]').forEach(btn => {
     btn.onclick = async () => {
       if (!confirm('Удалить голосовую заметку?')) return;
-      await idbDelete(btn.dataset.vdel); render();
+      await idbDelete(btn.dataset.vdel);
+      if (state.tab === 'settings') openAllVoices();
+      else render();
     };
   });
-}
-
-async function renderVoice(header, view) {
-  header.innerHTML = `<h1>Заметки</h1>`;
-  const voices = (await idbGetAll()).sort((a,b)=>b.createdAt - a.createdAt);
-  const totalBytes = voices.reduce((s,v)=>s+(v.size||0),0);
-  view.innerHTML = `
-    <div style="padding:0 16px 12px;color:var(--muted);font-size:13px">
-      ${voices.length} ${plural(voices.length,'запись','записи','записей')} · ${fmtBytes(totalBytes)}
-    </div>
-    <div class="list">
-      ${voices.length ? voices.map(v => {
-        const c = v.clientId ? db.clients.find(x => x.id === v.clientId) : null;
-        return voiceRowHTML(v, c);
-      }).join('') : `<div class="empty">Голосовых пока нет.<br>Нажмите 🎤 и скажите что-нибудь</div>`}
-    </div>
-    <button class="fab" id="fab-rec">🎤 Записать</button>
-  `;
-  bindVoiceRows();
-  document.getElementById('fab-rec').onclick = () => openRecorder(null);
 }
 
 function renderMoney(header, view) {
@@ -553,6 +632,79 @@ function renderMoney(header, view) {
     </div>`;
 }
 
+function renderSettings(header, view) {
+  header.innerHTML = `<h1>Настройки</h1>`;
+  const tpl = (db.settings && db.settings.reminderTemplate) || DEFAULT_TEMPLATE;
+  view.innerHTML = `
+    <div class="settings-section">
+      <h3>Шаблон напоминания</h3>
+      <div class="settings-card">
+        <div class="desc">Этот текст будет подставляться при отправке напоминания. Нажмите на переменную, чтобы вставить её в шаблон.</div>
+        <div class="vars" id="vars">
+          <button class="var-btn" data-v="{имя}">{имя}</button>
+          <button class="var-btn" data-v="{дата}">{дата}</button>
+          <button class="var-btn" data-v="{время}">{время}</button>
+          <button class="var-btn" data-v="{услуга}">{услуга}</button>
+          <button class="var-btn" data-v="{цена}">{цена}</button>
+        </div>
+        <textarea id="tpl" style="min-height:110px">${esc(tpl)}</textarea>
+        <button class="btn primary small" id="tpl-save" style="margin-top:10px">Сохранить шаблон</button>
+      </div>
+
+      <h3>Данные</h3>
+      <div class="menu-row" id="open-voices">
+        <span>🎤 Все голосовые заметки</span>
+        <span class="arr">›</span>
+      </div>
+      <div class="menu-row" id="open-about">
+        <span>ℹ️ О приложении</span>
+        <span class="arr">›</span>
+      </div>
+    </div>
+  `;
+  const ta = document.getElementById('tpl');
+  view.querySelectorAll('[data-v]').forEach(b => b.onclick = () => {
+    const v = b.dataset.v;
+    const pos = ta.selectionStart;
+    ta.value = ta.value.slice(0,pos) + v + ta.value.slice(pos);
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = pos + v.length;
+  });
+  document.getElementById('tpl-save').onclick = () => {
+    db.settings.reminderTemplate = ta.value;
+    saveDB(db);
+    const t = document.createElement('div');
+    t.textContent = '✅ Шаблон сохранён';
+    t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1c1f24;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:100;';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+  };
+  document.getElementById('open-voices').onclick = openAllVoices;
+  document.getElementById('open-about').onclick = () => {
+    alert('Записи мастера v5\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
+  };
+}
+
+async function openAllVoices() {
+  const m = document.getElementById('modal');
+  const voices = (await idbGetAll()).sort((a,b)=>b.createdAt - a.createdAt);
+  const totalBytes = voices.reduce((s,v)=>s+(v.size||0),0);
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Все голосовые заметки</h2>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:12px">
+        ${voices.length} ${plural(voices.length,'запись','записи','записей')} · ${fmtBytes(totalBytes)}
+      </div>
+      ${voices.length ? voices.map(v => {
+        const c = v.clientId ? db.clients.find(x => x.id === v.clientId) : null;
+        return voiceRowHTML(v, c);
+      }).join('') : '<div class="empty">Голосовых пока нет</div>'}
+      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
+    </div></div>`;
+  bindClose();
+  bindVoiceRows();
+}
+
 function closeModal() { document.getElementById('modal').innerHTML = ''; }
 function bindClose() {
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeModal);
@@ -569,7 +721,7 @@ function openApptSheet(id) {
       <h2>${esc(c?c.name:'Без имени')} · ${a.time}</h2>
       <div class="kv"><span class="k">Услуга</span><span class="v">${esc(a.service)}</span></div>
       <div class="kv"><span class="k">Цена</span><span class="v">${fmtMoney(a.price)}</span></div>
-      <div class="kv"><span class="k">Дата</span><span class="v">${fmtDate(a.date)}</span></div>
+      <div class="kv"><span class="k">Дата</span><span class="v">${fmtDateFull(a.date)}</span></div>
       <div class="kv"><span class="k">Оплата</span><span class="v">${a.paid?'Оплачено':'Не оплачено'}</span></div>
       <div class="kv"><span class="k">Напоминание</span><span class="v">${a.reminderOn ? (a.reminderSent?'Отправлено':'Запланировано') : 'Выключено'}</span></div>
       <div class="actions">
@@ -585,16 +737,88 @@ function openApptSheet(id) {
   m.querySelector('[data-act="toggle-paid"]').onclick = () => { a.paid = !a.paid; saveDB(db); closeModal(); render(); };
   m.querySelector('[data-act="edit"]').onclick = () => { closeModal(); openEditAppt(id); };
   const r = m.querySelector('[data-act="send-reminder"]');
-  if (r) r.onclick = () => {
-    a.reminderSent = true; saveDB(db);
-    const text = `Здравствуйте, ${c.name.split(' ')[0]}! Напоминаю о записи ${fmtDate(a.date)} в ${a.time} (${a.service}). Если планы изменились — напишите, пожалуйста.`;
-    closeModal(); showReminder(text, c);
-  };
+  if (r) r.onclick = () => { closeModal(); openSendReminder(id); };
   const oc = m.querySelector('[data-act="open-client"]');
   if (oc) oc.onclick = () => { closeModal(); state.tab='clients'; state.clientId=c.id; render(); };
   m.querySelector('[data-act="delete"]').onclick = () => {
     if (!confirm('Удалить запись?')) return;
     db.appointments = db.appointments.filter(x => x.id !== id); saveDB(db); closeModal(); render();
+  };
+}
+
+function buildReminderText(a, c) {
+  const tpl = (db.settings && db.settings.reminderTemplate) || DEFAULT_TEMPLATE;
+  const name = c ? c.name.split(' ')[0] : '';
+  return tpl
+    .replace(/\{имя\}/g, name)
+    .replace(/\{дата\}/g, fmtDateFull(a.date))
+    .replace(/\{время\}/g, a.time)
+    .replace(/\{услуга\}/g, a.service)
+    .replace(/\{цена\}/g, fmtMoney(a.price));
+}
+
+function openSendReminder(apptId) {
+  const a = db.appointments.find(x => x.id === apptId); if (!a) return;
+  const c = db.clients.find(x => x.id === a.clientId);
+  if (!c) { alert('У записи нет клиента'); return; }
+  const text = buildReminderText(a, c);
+  const phone = (c.phone || '').replace(/[^\d]/g, '');
+  const tgUser = (c.tg || '').replace('@','');
+  const m = document.getElementById('modal');
+
+  const waLink = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : null;
+  const tgLink = tgUser ? `https://t.me/${tgUser}` : null;
+  const smsLink = phone ? `sms:${c.phone}?body=${encodeURIComponent(text)}` : null;
+
+  m.innerHTML = `
+    <div class="sheet-bg" data-close-bg><div class="sheet">
+      <h2>Отправить напоминание</h2>
+      <div class="row" style="background:#f6f7f9;padding:10px;border-radius:10px;font-size:13px;white-space:pre-wrap">${esc(text)}</div>
+      <div style="color:var(--muted);font-size:12px;margin:6px 0 14px">Кому: ${esc(c.name)}${c.phone?' · '+esc(c.phone):''}${c.tg?' · '+esc(c.tg):''}</div>
+
+      ${waLink ? `<a class="btn primary" href="${waLink}" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:8px" data-act="wa">🟢 WhatsApp</a>` : ''}
+      ${tgLink ? `<button class="btn primary" data-act="tg" style="background:#2796d4;margin-bottom:8px">✈️ Telegram</button>` : ''}
+      ${smsLink ? `<a class="btn primary" href="${smsLink}" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#8a909a;margin-bottom:8px">💬 SMS</a>` : ''}
+      <button class="btn primary" data-act="max" style="background:#ff5b22;margin-bottom:8px">🟠 MAX</button>
+      <button class="btn ghost" data-act="copy" style="margin-bottom:8px">📋 Копировать текст</button>
+
+      <div class="btn-row">
+        <button class="btn ghost" data-close>Отмена</button>
+        <button class="btn primary" data-act="mark-sent">✅ Отметить как отправленное</button>
+      </div>
+    </div></div>`;
+  bindClose();
+
+  const copyText = async () => {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch(e) {
+      const tmp = document.createElement('textarea');
+      tmp.value = text; document.body.appendChild(tmp); tmp.select();
+      try { document.execCommand('copy'); } catch(e2){}
+      tmp.remove(); return true;
+    }
+  };
+
+  const tgBtn = m.querySelector('[data-act="tg"]');
+  if (tgBtn) tgBtn.onclick = async () => {
+    await copyText();
+    window.open(tgLink, '_blank');
+    alert('Текст скопирован в буфер. Вставьте его в чат Telegram.');
+  };
+
+  m.querySelector('[data-act="max"]').onclick = async () => {
+    await copyText();
+    window.open('https://max.ru', '_blank');
+    alert('Текст скопирован. Откройте чат в MAX и вставьте сообщение.');
+  };
+
+  m.querySelector('[data-act="copy"]').onclick = async () => {
+    await copyText();
+    alert('Текст скопирован');
+  };
+
+  m.querySelector('[data-act="mark-sent"]').onclick = () => {
+    a.reminderSent = true; saveDB(db); closeModal(); render();
   };
 }
 
@@ -625,29 +849,6 @@ function openEditAppt(id) {
     a.date = document.getElementById('e-date').value;
     a.time = document.getElementById('e-time').value || '10:00';
     saveDB(db); closeModal(); render();
-  };
-}
-
-function showReminder(text, c) {
-  const m = document.getElementById('modal');
-  const link = c.tg ? `https://t.me/${c.tg.replace('@','')}` : '';
-  m.innerHTML = `
-    <div class="sheet-bg" data-close-bg><div class="sheet">
-      <h2>Напоминание</h2>
-      <div class="row"><textarea id="rem-text" style="min-height:110px">${esc(text)}</textarea></div>
-      <div class="btn-row">
-        <button class="btn ghost" id="rem-copy">📋 Копировать</button>
-        ${link ? `<a class="btn primary" href="${link}" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Открыть TG</a>` : ''}
-      </div>
-      <div class="btn-row"><button class="btn ghost" data-close>Закрыть</button></div>
-    </div></div>`;
-  bindClose();
-  document.getElementById('rem-copy').onclick = async () => {
-    try { await navigator.clipboard.writeText(text); alert('Скопировано'); }
-    catch(e) {
-      const t = document.getElementById('rem-text'); t.select();
-      document.execCommand('copy'); alert('Скопировано');
-    }
   };
 }
 
@@ -990,7 +1191,7 @@ function openRecorder(prefillClientId) {
         createdAt: Date.now(), duration: st.duration, size: st.blob.size,
       });
       closeModal();
-      if (state.tab === 'voice' || (state.tab === 'clients' && state.clientId === clientId)) render();
+      if (state.tab === 'clients' && state.clientId === clientId) render();
       else {
         const t = document.createElement('div');
         t.textContent = '✅ Заметка сохранена';
@@ -1005,7 +1206,6 @@ function openRecorder(prefillClientId) {
 document.getElementById('tabs').onclick = e => {
   const b = e.target.closest('button[data-tab]'); if (!b) return;
   const newTab = b.dataset.tab;
-  if (newTab === state.tab && newTab !== 'today') return;
   state.tab = newTab;
   state.clientId = null;
   if (newTab === 'today') state.date = todayISO();
