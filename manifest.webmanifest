@@ -1,6 +1,6 @@
 {
-  "name": "Записи мастера",
-  "short_name": "Записи",
+    "name": "Записи мастера",
+  "short_name": "Записи мастера",
   "start_url": "/my-crm/",
   "display": "standalone",
   "background_color": "#f6f7f9",
