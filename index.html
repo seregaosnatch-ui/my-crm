@@ -41,6 +41,42 @@
   .datebar { display:flex; align-items:center; gap:8px; padding:0 16px 10px; }
   .datebar .label { flex:1; text-align:center; font-weight:600; font-size:14px; }
 
+  /* большая кнопка голосового администратора */
+  .voice-hero {
+    display: flex; align-items: center; gap: 14px;
+    margin: 4px 16px 14px; padding: 16px 18px;
+    background: linear-gradient(135deg, #2f6bff 0%, #6b3dff 100%);
+    color: #fff; border: none; border-radius: 16px;
+    font-family: inherit; text-align: left; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(47,107,255,.35);
+    animation: heroPulse 2.5s ease-in-out infinite;
+    position: relative; overflow: hidden;
+  }
+  .voice-hero::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,.18) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: heroShine 3s ease-in-out infinite;
+  }
+  @keyframes heroPulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(47,107,255,.35); }
+    50% { box-shadow: 0 8px 32px rgba(107,61,255,.55); }
+  }
+  @keyframes heroShine {
+    0%, 60% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .voice-hero:active { transform: scale(.98); }
+  .vh-icon {
+    font-size: 32px; flex-shrink: 0;
+    background: rgba(255,255,255,.2); width: 52px; height: 52px;
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .vh-text { display: flex; flex-direction: column; gap: 3px; flex: 1; position: relative; z-index: 1; }
+  .vh-title { font-size: 16px; font-weight: 700; letter-spacing: .2px; }
+  .vh-hint { font-size: 12px; opacity: .9; font-weight: 500; }
+
   .list { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
   .card { background:var(--card); border-radius:var(--radius); padding:14px;
     border:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
@@ -146,7 +182,6 @@
   .hint-green { font-size:12px; margin-top:6px; color:var(--green); }
   .hint-muted { font-size:12px; margin-top:6px; color:var(--muted); }
 
-  /* настройки */
   .settings-section { padding:0 16px 14px; }
   .settings-section h3 { font-size:13px; color:var(--muted); text-transform:uppercase;
     letter-spacing:.5px; margin:16px 0 8px; font-weight:700; }
@@ -427,10 +462,9 @@ function apptCard(a) {
 
 function renderWeekStrip() {
   const today = todayISO();
-  const start = today;
   let html = '<div class="week-strip" id="week-strip">';
   for (let i = 0; i < 7; i++) {
-    const iso = shiftDate(start, i);
+    const iso = shiftDate(today, i);
     const cnt = db.appointments.filter(a => a.date === iso).length;
     const cls = [
       'day-btn',
@@ -458,7 +492,6 @@ function renderToday(header, view) {
   const isToday = date === todayISO();
   const dateLabel = isToday ? 'Сегодня, ' + fmtDate(date) : fmtDateFull(date);
 
-  // блок "кому напомнить сегодня" — записи на завтра без отправленного напоминания
   const tomorrow = shiftDate(todayISO(), 1);
   const toRemind = db.appointments.filter(a => a.date === tomorrow && a.reminderOn && !a.reminderSent);
   let remindBlock = '';
@@ -479,6 +512,13 @@ function renderToday(header, view) {
   view.innerHTML = `
     ${renderWeekStrip()}
     <div class="datebar"><div class="label">${dateLabel}</div></div>
+    <button class="voice-hero" id="voice-hero">
+      <span class="vh-icon">🎤</span>
+      <span class="vh-text">
+        <span class="vh-title">Создать запись голосом</span>
+        <span class="vh-hint">Скажи: «Анна, маникюр, завтра в десять»</span>
+      </span>
+    </button>
     ${remindBlock}
     <div class="list">
       ${list.length ? list.map(apptCard).join('') : `<div class="empty">На этот день записей нет.<br>Нажмите «+ Запись» или 🎤</div>`}
@@ -494,7 +534,7 @@ function renderToday(header, view) {
     e.stopPropagation(); openSendReminder(b.dataset.remind);
   });
   document.getElementById('fab-add').onclick = () => openNewAppt(null);
-  // проскроллить полосу к активному дню
+  document.getElementById('voice-hero').onclick = openVoiceAdmin;
   const active = view.querySelector('.day-btn.active');
   if (active) active.scrollIntoView({ inline:'center', block:'nearest' });
 }
@@ -681,7 +721,7 @@ function renderSettings(header, view) {
   };
   document.getElementById('open-voices').onclick = openAllVoices;
   document.getElementById('open-about').onclick = () => {
-    alert('Записи мастера v5\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
+    alert('Записи мастера v6\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
   };
 }
 
@@ -776,7 +816,7 @@ function openSendReminder(apptId) {
       <div class="row" style="background:#f6f7f9;padding:10px;border-radius:10px;font-size:13px;white-space:pre-wrap">${esc(text)}</div>
       <div style="color:var(--muted);font-size:12px;margin:6px 0 14px">Кому: ${esc(c.name)}${c.phone?' · '+esc(c.phone):''}${c.tg?' · '+esc(c.tg):''}</div>
 
-      ${waLink ? `<a class="btn primary" href="${waLink}" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:8px" data-act="wa">🟢 WhatsApp</a>` : ''}
+      ${waLink ? `<a class="btn primary" href="${waLink}" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:8px">🟢 WhatsApp</a>` : ''}
       ${tgLink ? `<button class="btn primary" data-act="tg" style="background:#2796d4;margin-bottom:8px">✈️ Telegram</button>` : ''}
       ${smsLink ? `<a class="btn primary" href="${smsLink}" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#8a909a;margin-bottom:8px">💬 SMS</a>` : ''}
       <button class="btn primary" data-act="max" style="background:#ff5b22;margin-bottom:8px">🟠 MAX</button>
