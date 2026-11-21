@@ -21,7 +21,17 @@
     padding:14px 16px 10px; display:flex; align-items:center; gap:10px; }
   header h1 { font-size:18px; margin:0; flex:1; font-weight:700; }
   .hdr-btn { border:1px solid var(--line); background:var(--card);
-    width:40px; height:40px; border-radius:12px; font-size:18px; cursor:pointer; }
+    width:40px; height:40px; border-radius:12px; font-size:18px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:var(--text); }
+  .hdr-add-btn {
+    border: none; background: var(--accent); color: #fff;
+    height: 40px; padding: 0 14px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; font-family: inherit;
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    white-space: nowrap; box-shadow: 0 4px 12px rgba(47,107,255,.3);
+  }
+  .hdr-add-btn .plus { font-size: 18px; line-height: 1; font-weight: 700; }
+  .hdr-add-btn:active { transform: scale(.97); }
 
   .week-strip { display:flex; gap:6px; padding:0 16px 10px; overflow-x:auto;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
@@ -36,14 +46,12 @@
   .day-btn.active .wd, .day-btn.active .d, .day-btn.active .cnt { color:#fff; }
   .day-btn.today .d { color:var(--accent); }
   .day-btn.today.active .d { color:#fff; }
-  /* выходные — красным */
   .day-btn.weekend:not(.active) .d { color: var(--red); }
   .day-btn.weekend:not(.active) .wd { color: var(--red); opacity:.75; }
 
   .datebar { display:flex; align-items:center; gap:8px; padding:0 16px 10px; }
   .datebar .label { flex:1; text-align:center; font-weight:600; font-size:14px; }
 
-  /* большая кнопка голосового администратора — изумрудно-бирюзовая */
   .voice-hero {
     display: flex; align-items: center; gap: 14px;
     margin: 4px 16px 14px; padding: 16px 18px;
@@ -488,7 +496,8 @@ function renderWeekStrip() {
 }
 
 function renderToday(header, view) {
-  header.innerHTML = `<h1>Записи</h1>`;
+  header.innerHTML = `<h1>Записи</h1><button class="hdr-add-btn" id="hdr-add" title="Новая запись"><span class="plus">+</span> Запись</button>`;
+  document.getElementById('hdr-add').onclick = () => openNewAppt(null);
 
   const date = state.date;
   const list = db.appointments.filter(a => a.date === date).sort((x,y)=>x.time.localeCompare(y.time));
@@ -525,10 +534,9 @@ function renderToday(header, view) {
     </button>
     ${remindBlock}
     <div class="list">
-      ${list.length ? list.map(apptCard).join('') : `<div class="empty">На этот день записей нет.<br>Нажмите «+ Запись» или «Создать голосом»</div>`}
+      ${list.length ? list.map(apptCard).join('') : `<div class="empty">На этот день записей нет.<br>Нажмите «+ Запись» вверху или «Создать запись голосом»</div>`}
     </div>
     ${list.length ? `<div class="summary"><span>${list.length} ${plural(list.length,'запись','записи','записей')} на день</span><b>${fmtMoney(total)}</b></div>` : ''}
-    <button class="fab" id="fab-add">+ Запись</button>
   `;
   view.querySelectorAll('[data-day]').forEach(b => b.onclick = () => {
     state.date = b.dataset.day; render();
@@ -537,7 +545,6 @@ function renderToday(header, view) {
   view.querySelectorAll('[data-remind]').forEach(b => b.onclick = (e) => {
     e.stopPropagation(); openSendReminder(b.dataset.remind);
   });
-  document.getElementById('fab-add').onclick = () => openNewAppt(null);
   document.getElementById('voice-hero').onclick = openVoiceAdmin;
   const active = view.querySelector('.day-btn.active');
   if (active) active.scrollIntoView({ inline:'center', block:'nearest' });
@@ -725,7 +732,7 @@ function renderSettings(header, view) {
   };
   document.getElementById('open-voices').onclick = openAllVoices;
   document.getElementById('open-about').onclick = () => {
-    alert('Записи мастера v7\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
+    alert('Записи мастера v9\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
   };
 }
 
