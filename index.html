@@ -23,7 +23,6 @@
   .hdr-btn { border:1px solid var(--line); background:var(--card);
     width:40px; height:40px; border-radius:12px; font-size:18px; cursor:pointer; }
 
-  /* горизонтальная полоса дней */
   .week-strip { display:flex; gap:6px; padding:0 16px 10px; overflow-x:auto;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
   .week-strip::-webkit-scrollbar { display:none; }
@@ -37,45 +36,48 @@
   .day-btn.active .wd, .day-btn.active .d, .day-btn.active .cnt { color:#fff; }
   .day-btn.today .d { color:var(--accent); }
   .day-btn.today.active .d { color:#fff; }
+  /* выходные — красным */
+  .day-btn.weekend:not(.active) .d { color: var(--red); }
+  .day-btn.weekend:not(.active) .wd { color: var(--red); opacity:.75; }
 
   .datebar { display:flex; align-items:center; gap:8px; padding:0 16px 10px; }
   .datebar .label { flex:1; text-align:center; font-weight:600; font-size:14px; }
 
-  /* большая кнопка голосового администратора */
+  /* большая кнопка голосового администратора — изумрудно-бирюзовая */
   .voice-hero {
     display: flex; align-items: center; gap: 14px;
     margin: 4px 16px 14px; padding: 16px 18px;
-    background: linear-gradient(135deg, #2f6bff 0%, #6b3dff 100%);
+    background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
     color: #fff; border: none; border-radius: 16px;
     font-family: inherit; text-align: left; cursor: pointer;
-    box-shadow: 0 8px 24px rgba(47,107,255,.35);
+    box-shadow: 0 8px 24px rgba(16,185,129,.35);
     animation: heroPulse 2.5s ease-in-out infinite;
     position: relative; overflow: hidden;
   }
   .voice-hero::after {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,.18) 50%, transparent 100%);
+    background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,.2) 50%, transparent 100%);
     transform: translateX(-100%);
     animation: heroShine 3s ease-in-out infinite;
   }
   @keyframes heroPulse {
-    0%, 100% { box-shadow: 0 8px 24px rgba(47,107,255,.35); }
-    50% { box-shadow: 0 8px 32px rgba(107,61,255,.55); }
+    0%, 100% { box-shadow: 0 8px 24px rgba(16,185,129,.35); }
+    50% { box-shadow: 0 8px 32px rgba(6,182,212,.55); }
   }
   @keyframes heroShine {
     0%, 60% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
   .voice-hero:active { transform: scale(.98); }
-  .vh-icon {
-    font-size: 32px; flex-shrink: 0;
-    background: rgba(255,255,255,.2); width: 52px; height: 52px;
-    border-radius: 14px; display: flex; align-items: center; justify-content: center;
-    position: relative; z-index: 1;
-  }
   .vh-text { display: flex; flex-direction: column; gap: 3px; flex: 1; position: relative; z-index: 1; }
   .vh-title { font-size: 16px; font-weight: 700; letter-spacing: .2px; }
   .vh-hint { font-size: 12px; opacity: .9; font-weight: 500; }
+  .vh-icon {
+    font-size: 32px; flex-shrink: 0;
+    background: rgba(255,255,255,.22); width: 52px; height: 52px;
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 1;
+  }
 
   .list { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
   .card { background:var(--card); border-radius:var(--radius); padding:14px;
@@ -466,10 +468,13 @@ function renderWeekStrip() {
   for (let i = 0; i < 7; i++) {
     const iso = shiftDate(today, i);
     const cnt = db.appointments.filter(a => a.date === iso).length;
+    const dow = new Date(iso + 'T12:00:00').getDay();
+    const isWeekend = dow === 0 || dow === 6;
     const cls = [
       'day-btn',
       iso === state.date ? 'active' : '',
-      iso === today ? 'today' : ''
+      iso === today ? 'today' : '',
+      isWeekend ? 'weekend' : ''
     ].filter(Boolean).join(' ');
     const label = i === 0 ? 'Сег' : weekdayShort(iso);
     html += `<button class="${cls}" data-day="${iso}">
@@ -483,8 +488,7 @@ function renderWeekStrip() {
 }
 
 function renderToday(header, view) {
-  header.innerHTML = `<h1>Записи</h1><button class="hdr-btn" id="hdr-mic" title="Голосом создать запись">🎤</button>`;
-  document.getElementById('hdr-mic').onclick = openVoiceAdmin;
+  header.innerHTML = `<h1>Записи</h1>`;
 
   const date = state.date;
   const list = db.appointments.filter(a => a.date === date).sort((x,y)=>x.time.localeCompare(y.time));
@@ -513,15 +517,15 @@ function renderToday(header, view) {
     ${renderWeekStrip()}
     <div class="datebar"><div class="label">${dateLabel}</div></div>
     <button class="voice-hero" id="voice-hero">
-      <span class="vh-icon">🎤</span>
       <span class="vh-text">
         <span class="vh-title">Создать запись голосом</span>
         <span class="vh-hint">Скажи: «Анна, маникюр, завтра в десять»</span>
       </span>
+      <span class="vh-icon">🎤</span>
     </button>
     ${remindBlock}
     <div class="list">
-      ${list.length ? list.map(apptCard).join('') : `<div class="empty">На этот день записей нет.<br>Нажмите «+ Запись» или 🎤</div>`}
+      ${list.length ? list.map(apptCard).join('') : `<div class="empty">На этот день записей нет.<br>Нажмите «+ Запись» или «Создать голосом»</div>`}
     </div>
     ${list.length ? `<div class="summary"><span>${list.length} ${plural(list.length,'запись','записи','записей')} на день</span><b>${fmtMoney(total)}</b></div>` : ''}
     <button class="fab" id="fab-add">+ Запись</button>
@@ -721,7 +725,7 @@ function renderSettings(header, view) {
   };
   document.getElementById('open-voices').onclick = openAllVoices;
   document.getElementById('open-about').onclick = () => {
-    alert('Записи мастера v6\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
+    alert('Записи мастера v7\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
   };
 }
 
