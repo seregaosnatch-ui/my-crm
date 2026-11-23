@@ -140,7 +140,6 @@
   .money-tile.full { grid-column:1 / -1; }
   .money-tile.warn .v { color:var(--orange); }
 
-  /* карточка клиента */
   .client-card { position:relative; padding-right:44px; cursor:pointer; }
   .client-del {
     position:absolute; top:8px; right:8px;
@@ -187,7 +186,6 @@
   .stat-tile .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
   .stat-tile .v { font-size:18px; font-weight:700; }
 
-  /* большая красная кнопка удаления клиента */
   .del-client-btn {
     width:100%; padding:18px 20px;
     background:var(--red);
@@ -856,7 +854,7 @@ function renderSettings(header, view) {
   };
   document.getElementById('open-voices').onclick = openAllVoices;
   document.getElementById('open-about').onclick = () => {
-    alert('Записи мастера v12\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
+    alert('Записи мастера v13\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
   };
 }
 
@@ -932,6 +930,9 @@ function buildReminderText(a, c) {
     .replace(/\{цена\}/g, fmtMoney(a.price));
 }
 
+/* ============================================================
+   ОТПРАВКА НАПОМИНАНИЯ — все кнопки видны всегда
+   ============================================================ */
 function openSendReminder(apptId) {
   const a = db.appointments.find(x => x.id === apptId); if (!a) return;
   const c = db.clients.find(x => x.id === a.clientId);
@@ -945,21 +946,27 @@ function openSendReminder(apptId) {
   const tgLink = tgUser ? `https://t.me/${tgUser}` : null;
   const smsLink = phone ? `sms:${c.phone}?body=${encodeURIComponent(text)}` : null;
 
+  const waBlock = waLink
+    ? `<a class="btn primary" href="${waLink}" target="_blank" data-act="wa" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:8px;background:#25d366">🟢 WhatsApp</a>`
+    : `<button class="btn primary" data-act="no-phone" style="background:#25d366;margin-bottom:8px;opacity:.55">🟢 WhatsApp — нет телефона</button>`;
+
+  const tgBlock = tgLink
+    ? `<button class="btn primary" data-act="tg" style="background:#2796d4;margin-bottom:8px">✈️ Telegram</button>`
+    : `<button class="btn primary" data-act="no-tg" style="background:#2796d4;margin-bottom:8px;opacity:.55">✈️ Telegram — нет ника</button>`;
+
+  const smsBlock = smsLink
+    ? `<a class="btn primary" href="${smsLink}" data-act="sms" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#8a909a;margin-bottom:8px">💬 SMS</a>`
+    : `<button class="btn primary" data-act="no-phone" style="background:#8a909a;margin-bottom:8px;opacity:.55">💬 SMS — нет телефона</button>`;
+
   m.innerHTML = `
     <div class="sheet-bg" data-close-bg><div class="sheet">
       <h2>Отправить напоминание</h2>
       <div class="row" style="background:#f6f7f9;padding:10px;border-radius:10px;font-size:13px;white-space:pre-wrap">${esc(text)}</div>
       <div style="color:var(--muted);font-size:12px;margin:6px 0 14px">Кому: ${esc(c.name)}${c.phone?' · '+esc(c.phone):''}${c.tg?' · '+esc(c.tg):''}</div>
 
-           ${waLink
-        ? `<a class="btn primary" href="${waLink}" target="_blank" data-act="wa" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:8px;background:#25d366">🟢 WhatsApp</a>`
-        : `<button class="btn primary" data-act="no-phone" style="background:#25d366;margin-bottom:8px;opacity:.55">🟢 WhatsApp — нет телефона</button>`}
-      ${tgLink
-        ? `<button class="btn primary" data-act="tg" style="background:#2796d4;margin-bottom:8px">✈️ Telegram</button>`
-        : `<button class="btn primary" data-act="no-tg" style="background:#2796d4;margin-bottom:8px;opacity:.55">✈️ Telegram — нет ника</button>`}
-      ${smsLink
-        ? `<a class="btn primary" href="${smsLink}" data-act="sms" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#8a909a;margin-bottom:8px">💬 SMS</a>`
-        : `<button class="btn primary" data-act="no-phone" style="background:#8a909a;margin-bottom:8px;opacity:.55">💬 SMS — нет телефона</button>`}
+      ${waBlock}
+      ${tgBlock}
+      ${smsBlock}
       <button class="btn primary" data-act="max" style="background:#ff5b22;margin-bottom:8px">🟠 MAX</button>
       <button class="btn ghost" data-act="copy" style="margin-bottom:8px">📋 Копировать текст</button>
 
@@ -982,14 +989,34 @@ function openSendReminder(apptId) {
     }
   };
 
+  // "нет телефона" — предложить заполнить карточку
+  m.querySelectorAll('[data-act="no-phone"]').forEach(btn => btn.onclick = () => {
+    if (confirm('У клиента не указан телефон.\n\nОткрыть карточку, чтобы заполнить?')) {
+      closeModal();
+      state.tab = 'clients';
+      state.clientId = c.id;
+      render();
+    }
+  });
+
+  // "нет ника Telegram"
+  const noTg = m.querySelector('[data-act="no-tg"]');
+  if (noTg) noTg.onclick = () => {
+    if (confirm('У клиента не указан Telegram.\n\nОткрыть карточку, чтобы заполнить?')) {
+      closeModal();
+      state.tab = 'clients';
+      state.clientId = c.id;
+      render();
+    }
+  };
+
   const waEl = m.querySelector('[data-act="wa"]');
   if (waEl) waEl.onclick = () => {
     markSent();
     closeModal();
     render();
   };
- 
-  
+
   const smsEl = m.querySelector('[data-act="sms"]');
   if (smsEl) smsEl.onclick = () => {
     markSent();
@@ -1107,9 +1134,6 @@ function openNewAppt(prefillClientId) {
   };
 }
 
-/* ============================================================
-   ГОЛОСОВОЙ АДМИНИСТРАТОР — работает пока не отключишь
-   ============================================================ */
 function openVoiceAdmin() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const m = document.getElementById('modal');
@@ -1143,10 +1167,10 @@ function openVoiceAdmin() {
   bindClose();
 
   let recognition = null;
-  let listening = false;      // пользователь хочет слушать (не остановил сам)
+  let listening = false;
   let timerInt = null;
   let startTs = 0;
-  let accumulated = '';       // накопленный финальный текст между перезапусками
+  let accumulated = '';
   let restartTimeout = null;
 
   const btn = document.getElementById('va-btn');
@@ -1171,7 +1195,7 @@ function openVoiceAdmin() {
   function startRecognition() {
     recognition = new SR();
     recognition.lang = 'ru-RU';
-    recognition.continuous = true;        // не обрывать по паузе
+    recognition.continuous = true;
     recognition.interimResults = true;
 
     let sessionFinal = '';
@@ -1188,7 +1212,6 @@ function openVoiceAdmin() {
     };
 
     recognition.onerror = (e) => {
-      // 'no-speech' и 'aborted' — не реальные ошибки, при них просто перезапускаем
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         hintEl.innerHTML = `<span style="color:var(--red)">Нет доступа к микрофону. Разрешите доступ.</span>`;
         stopAll();
@@ -1199,16 +1222,12 @@ function openVoiceAdmin() {
         stopAll();
         return;
       }
-      // остальные — игнорируем, перезапуск произойдёт в onend
     };
 
     recognition.onend = () => {
-      // сохраняем то, что услышали в этой сессии
       if (sessionFinal) accumulated += sessionFinal;
       sessionFinal = '';
       updateTranscript();
-
-      // если пользователь не остановил — перезапускаем
       if (listening) {
         restartTimeout = setTimeout(() => {
           if (!listening) return;
@@ -1224,7 +1243,6 @@ function openVoiceAdmin() {
     try {
       recognition.start();
     } catch(e) {
-      // если start выбросил исключение — попробуем ещё раз через 200мс
       restartTimeout = setTimeout(() => {
         if (listening) { try { startRecognition(); } catch(e2) { stopAll(); } }
       }, 200);
@@ -1242,13 +1260,10 @@ function openVoiceAdmin() {
   if (SR && btn) {
     btn.onclick = () => {
       if (listening) {
-        // пользователь остановил запись
         stopAll();
         hintEl.textContent = 'Готово. Нажмите «Разобрать» или запишите заново.';
         return;
       }
-
-      // старт
       listening = true;
       accumulated = '';
       textInput.value = '';
@@ -1262,21 +1277,17 @@ function openVoiceAdmin() {
       timerInt = setInterval(() => {
         timerEl.textContent = fmtDur((Date.now() - startTs) / 1000);
       }, 200);
-
       startRecognition();
     };
   }
 
   document.getElementById('va-parse').onclick = () => {
-    // на всякий случай останавливаем запись
     if (listening) stopAll();
     const text = (textInput.value || '').trim();
     if (!text) { alert('Скажите или введите фразу'); return; }
     openVoiceDraft(parseVoice(text));
   };
 
-  // при закрытии шторки — остановить запись
-  const origClose = closeModal;
   document.querySelectorAll('[data-close]').forEach(b => {
     b.addEventListener('click', () => { if (listening) stopAll(); }, { once: true });
   });
