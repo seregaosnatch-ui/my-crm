@@ -988,25 +988,8 @@ function openSendReminder(apptId) {
     closeModal();
     render();
   };
-  const noPhone = m.querySelector('[data-act="no-phone"]');
-  if (noPhone) noPhone.onclick = () => {
-    if (confirm('У клиента не указан телефон. Открыть карточку, чтобы заполнить?')) {
-      closeModal();
-      state.tab = 'clients';
-      state.clientId = c.id;
-      render();
-    }
-  };
-
-  const noTg = m.querySelector('[data-act="no-tg"]');
-  if (noTg) noTg.onclick = () => {
-    if (confirm('У клиента не указан Telegram. Открыть карточку, чтобы заполнить?')) {
-      closeModal();
-      state.tab = 'clients';
-      state.clientId = c.id;
-      render();
-    }
-  };
+ 
+  
   const smsEl = m.querySelector('[data-act="sms"]');
   if (smsEl) smsEl.onclick = () => {
     markSent();
