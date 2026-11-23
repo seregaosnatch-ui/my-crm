@@ -187,6 +187,18 @@
   .stat-tile .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
   .stat-tile .v { font-size:18px; font-weight:700; }
 
+  /* большая красная кнопка удаления клиента */
+  .del-client-btn {
+    width:100%; padding:18px 20px;
+    background:var(--red);
+    color:#fff; border:none; border-radius:14px;
+    font-size:16px; font-weight:700; font-family:inherit;
+    cursor:pointer; letter-spacing:.3px;
+    box-shadow:0 6px 18px rgba(224,69,69,.4);
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .del-client-btn:active { transform:scale(.98); background:#c93b3b; }
+
   .sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:30;
     display:flex; align-items:flex-end; justify-content:center; }
   .sheet { background:#fff; width:100%; max-width:480px;
@@ -716,7 +728,7 @@ async function renderClientCard(header, view) {
     </div>
 
     <div style="padding:16px;">
-      <button class="btn danger" id="c-del">Удалить клиента</button>
+      <button class="del-client-btn" id="c-del">🗑 Удалить клиента</button>
     </div>
   `;
 
@@ -844,7 +856,7 @@ function renderSettings(header, view) {
   };
   document.getElementById('open-voices').onclick = openAllVoices;
   document.getElementById('open-about').onclick = () => {
-    alert('Записи мастера v11\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
+    alert('Записи мастера v12\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
   };
 }
 
@@ -1088,6 +1100,9 @@ function openNewAppt(prefillClientId) {
   };
 }
 
+/* ============================================================
+   ГОЛОСОВОЙ АДМИНИСТРАТОР — работает пока не отключишь
+   ============================================================ */
 function openVoiceAdmin() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const m = document.getElementById('modal');
@@ -1099,7 +1114,7 @@ function openVoiceAdmin() {
         <div class="voice-rec">
           <button class="rec-circle" id="va-btn">🎤</button>
           <div class="rec-timer" id="va-timer">0:00</div>
-          <div class="rec-hint" id="va-hint">Нажмите и говорите. Например: «Анна, маникюр, завтра в десять»</div>
+          <div class="rec-hint" id="va-hint">Нажмите и говорите. Работает до нажатия ■</div>
         </div>
         <div class="row" id="va-transcript-row" style="display:none">
           <label>Что услышали</label>
@@ -1120,7 +1135,13 @@ function openVoiceAdmin() {
     </div></div>`;
   bindClose();
 
-  let recognition = null, listening = false, timerInt = null, startTs = 0;
+  let recognition = null;
+  let listening = false;      // пользователь хочет слушать (не остановил сам)
+  let timerInt = null;
+  let startTs = 0;
+  let accumulated = '';       // накопленный финальный текст между перезапусками
+  let restartTimeout = null;
+
   const btn = document.getElementById('va-btn');
   const timerEl = document.getElementById('va-timer');
   const hintEl = document.getElementById('va-hint');
@@ -1128,61 +1149,136 @@ function openVoiceAdmin() {
   const transcriptEl = document.getElementById('va-transcript');
   const textInput = document.getElementById('va-text');
 
-  function stopListening() {
-    listening = false;
+  function stopTimer() {
     clearInterval(timerInt);
+    timerInt = null;
+  }
+
+  function updateTranscript() {
+    transcriptRow.style.display = '';
+    const txt = accumulated.trim();
+    transcriptEl.textContent = txt || '…';
+    if (txt) textInput.value = txt;
+  }
+
+  function startRecognition() {
+    recognition = new SR();
+    recognition.lang = 'ru-RU';
+    recognition.continuous = true;        // не обрывать по паузе
+    recognition.interimResults = true;
+
+    let sessionFinal = '';
+
+    recognition.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) sessionFinal += t;
+        else interim += t;
+      }
+      transcriptRow.style.display = '';
+      transcriptEl.textContent = (accumulated + sessionFinal + interim).trim() || '…';
+    };
+
+    recognition.onerror = (e) => {
+      // 'no-speech' и 'aborted' — не реальные ошибки, при них просто перезапускаем
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        hintEl.innerHTML = `<span style="color:var(--red)">Нет доступа к микрофону. Разрешите доступ.</span>`;
+        stopAll();
+        return;
+      }
+      if (e.error === 'audio-capture') {
+        hintEl.innerHTML = `<span style="color:var(--red)">Микрофон не найден.</span>`;
+        stopAll();
+        return;
+      }
+      // остальные — игнорируем, перезапуск произойдёт в onend
+    };
+
+    recognition.onend = () => {
+      // сохраняем то, что услышали в этой сессии
+      if (sessionFinal) accumulated += sessionFinal;
+      sessionFinal = '';
+      updateTranscript();
+
+      // если пользователь не остановил — перезапускаем
+      if (listening) {
+        restartTimeout = setTimeout(() => {
+          if (!listening) return;
+          try { startRecognition(); }
+          catch(e) {
+            hintEl.innerHTML = `<span style="color:var(--red)">Сбой распознавания. Нажмите ■ и попробуйте снова.</span>`;
+            stopAll();
+          }
+        }, 150);
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch(e) {
+      // если start выбросил исключение — попробуем ещё раз через 200мс
+      restartTimeout = setTimeout(() => {
+        if (listening) { try { startRecognition(); } catch(e2) { stopAll(); } }
+      }, 200);
+    }
+  }
+
+  function stopAll() {
+    listening = false;
+    stopTimer();
+    if (restartTimeout) { clearTimeout(restartTimeout); restartTimeout = null; }
+    if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
     if (btn) { btn.classList.remove('recording'); btn.textContent = '🎤'; }
   }
 
   if (SR && btn) {
     btn.onclick = () => {
-      if (listening) { recognition && recognition.stop(); return; }
-      recognition = new SR();
-      recognition.lang = 'ru-RU';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      let finalText = '';
-
-      recognition.onresult = (e) => {
-        let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (e.results[i].isFinal) finalText += t;
-          else interim += t;
-        }
-        transcriptRow.style.display = '';
-        transcriptEl.textContent = (finalText + interim).trim() || '…';
-      };
-      recognition.onerror = (e) => {
-        hintEl.innerHTML = `<span style="color:var(--red)">Ошибка: ${e.error}</span>`;
-        stopListening();
-      };
-      recognition.onend = () => {
-        stopListening();
-        if (finalText) {
-          textInput.value = finalText.trim();
-          hintEl.textContent = 'Готово. Нажмите «Разобрать» или запишите заново.';
-        }
-      };
-      try {
-        recognition.start();
-        listening = true;
-        startTs = Date.now();
-        btn.classList.add('recording');
-        btn.textContent = '■';
-        hintEl.textContent = 'Слушаю…';
-        timerInt = setInterval(() => { timerEl.textContent = fmtDur((Date.now()-startTs)/1000); }, 200);
-      } catch(e) {
-        hintEl.innerHTML = `<span style="color:var(--red)">Не удалось запустить микрофон.</span>`;
+      if (listening) {
+        // пользователь остановил запись
+        stopAll();
+        hintEl.textContent = 'Готово. Нажмите «Разобрать» или запишите заново.';
+        return;
       }
+
+      // старт
+      listening = true;
+      accumulated = '';
+      textInput.value = '';
+      transcriptRow.style.display = 'none';
+      transcriptEl.textContent = '';
+      startTs = Date.now();
+      btn.classList.add('recording');
+      btn.textContent = '■';
+      hintEl.textContent = 'Слушаю… Говорите. Нажмите ■, чтобы остановить.';
+      stopTimer();
+      timerInt = setInterval(() => {
+        timerEl.textContent = fmtDur((Date.now() - startTs) / 1000);
+      }, 200);
+
+      startRecognition();
     };
   }
 
   document.getElementById('va-parse').onclick = () => {
+    // на всякий случай останавливаем запись
+    if (listening) stopAll();
     const text = (textInput.value || '').trim();
     if (!text) { alert('Скажите или введите фразу'); return; }
     openVoiceDraft(parseVoice(text));
   };
+
+  // при закрытии шторки — остановить запись
+  const origClose = closeModal;
+  document.querySelectorAll('[data-close]').forEach(b => {
+    b.addEventListener('click', () => { if (listening) stopAll(); }, { once: true });
+  });
+  const bg = document.querySelector('[data-close-bg]');
+  if (bg) {
+    bg.addEventListener('click', (e) => {
+      if (e.target === bg && listening) stopAll();
+    });
+  }
 }
 
 function openVoiceDraft(parsed) {
