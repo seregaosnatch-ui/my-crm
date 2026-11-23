@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f6f7f9">
 <link rel="manifest" href="/my-crm/manifest.webmanifest">
-<title>Записи</title>
+<title>Записи мастера</title>
 <style>
   :root {
     --bg:#f6f7f9; --card:#fff; --text:#1c1f24; --muted:#8a909a; --line:#eceef2;
@@ -92,7 +92,9 @@
 
   .list { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
   .card { background:var(--card); border-radius:var(--radius); padding:14px;
-    border:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
+    border:1px solid var(--line); display:flex; flex-direction:column; gap:8px;
+    margin:0 16px; }
+  .list .card { margin:0; }
   .card .top { display:flex; align-items:baseline; gap:10px; }
   .card .time { font-weight:700; font-size:15px; min-width:50px; }
   .card .name { font-weight:600; flex:1; }
@@ -137,6 +139,54 @@
   .money-tile .v { font-size:20px; font-weight:700; }
   .money-tile.full { grid-column:1 / -1; }
   .money-tile.warn .v { color:var(--orange); }
+
+  /* карточка клиента */
+  .client-card { position:relative; padding-right:44px; cursor:pointer; }
+  .client-del {
+    position:absolute; top:8px; right:8px;
+    border:none; background:transparent; color:var(--muted);
+    font-size:18px; cursor:pointer; padding:8px 12px; border-radius:8px;
+    line-height:1;
+  }
+  .client-del:active { color:var(--red); background:#fdecec; }
+
+  .client-header-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 16px 12px; gap:10px;
+  }
+  .client-title { font-size:20px; font-weight:700; flex:1; line-height:1.2; }
+
+  .client-contacts {
+    margin:0 16px 10px; padding:14px;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  }
+  .client-contacts .row { margin-bottom:10px; }
+  .client-contacts .row:last-of-type { margin-bottom:10px; }
+  .client-contacts label { display:block; font-size:12px; color:var(--muted); font-weight:600; margin-bottom:4px; text-transform:uppercase; letter-spacing:.3px; }
+  .client-contacts input { width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; font-family:inherit; font-size:15px; background:#fff; color:var(--text); }
+
+  .voice-mini-btn {
+    width:100%; padding:14px 16px;
+    background:linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+    color:#fff; border:none; border-radius:12px;
+    font-size:15px; font-weight:700; font-family:inherit;
+    cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,.35);
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .voice-mini-btn:active { transform:scale(.98); }
+
+  .client-stats {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    padding:0 16px; margin-top:4px;
+  }
+  .stat-tile {
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px;
+  }
+  .stat-tile.full { grid-column:1 / -1; }
+  .stat-tile .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
+  .stat-tile .v { font-size:18px; font-weight:700; }
+
   .sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:30;
     display:flex; align-items:flex-end; justify-content:center; }
   .sheet { background:#fff; width:100%; max-width:480px;
@@ -168,7 +218,7 @@
   .history-item { display:flex; justify-content:space-between; padding:8px 0;
     font-size:14px; border-bottom:1px solid var(--line); }
   .history-item:last-child { border-bottom:none; }
-  .voice-card { display:flex; flex-direction:column; gap:8px; }
+  .voice-card { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
   .voice-top { display:flex; align-items:center; gap:10px; }
   .voice-play { width:44px; height:44px; border-radius:50%; border:none;
     background:var(--accent); color:#fff; font-size:16px; cursor:pointer;
@@ -276,6 +326,13 @@ function plural(n,a,b,c) {
 function weekdayShort(iso) {
   const d = new Date(iso + 'T12:00:00');
   return ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()];
+}
+function toast(text) {
+  const t = document.createElement('div');
+  t.textContent = text;
+  t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1c1f24;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:100;';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
 }
 
 function loadDB() {
@@ -561,24 +618,53 @@ function renderClients(header, view) {
       ${db.clients.length ? db.clients.map(c => {
         const appts = db.appointments.filter(a => a.clientId === c.id);
         const last = [...appts].sort((x,y)=> (y.date+y.time).localeCompare(x.date+x.time))[0];
-        return `<div class="card" data-client="${c.id}">
+        return `<div class="card client-card" data-client="${c.id}">
+          <button class="client-del" data-del-client="${c.id}" title="Удалить клиента">✕</button>
           <div class="top">
             <div class="name">${esc(c.name)}</div>
-            <div class="sub">${appts.length} ${plural(appts.length,'визит','визита','визитов')}</div>
           </div>
+          <div class="sub">${appts.length} ${plural(appts.length,'визит','визита','визитов')}${c.phone ? ' · ' + esc(c.phone) : ''}</div>
           <div class="sub">${last ? 'Последний: ' + fmtDate(last.date) + ' · ' + esc(last.service) : 'Ещё не было визитов'}</div>
         </div>`;
       }).join('') : `<div class="empty">Клиентов пока нет</div>`}
     </div>`;
-  view.querySelectorAll('[data-client]').forEach(el => el.onclick = () => {
+  view.querySelectorAll('[data-client]').forEach(el => el.onclick = (e) => {
+    if (e.target.closest('[data-del-client]')) return;
     state.clientId = el.dataset.client; render();
   });
+  view.querySelectorAll('[data-del-client]').forEach(btn => btn.onclick = (e) => {
+    e.stopPropagation();
+    deleteClient(btn.dataset.delClient);
+  });
+}
+
+async function deleteClient(id) {
+  const c = db.clients.find(x => x.id === id); if (!c) return;
+  const appts = db.appointments.filter(a => a.clientId === id);
+  let msg = `Удалить клиента «${c.name}»?`;
+  if (appts.length) {
+    msg += `\n\nВсе ${appts.length} ${plural(appts.length,'запись','записи','записей')} этого клиента тоже будут удалены.`;
+  }
+  if (!confirm(msg)) return;
+
+  try {
+    const voices = await idbGetAll();
+    const myVoices = voices.filter(v => v.clientId === id);
+    for (const v of myVoices) await idbDelete(v.id);
+  } catch(e) {}
+
+  db.appointments = db.appointments.filter(a => a.clientId !== id);
+  db.clients = db.clients.filter(x => x.id !== id);
+  saveDB(db);
+  if (state.clientId === id) state.clientId = null;
+  toast('Клиент удалён');
+  render();
 }
 
 async function renderClientCard(header, view) {
   const c = db.clients.find(x => x.id === state.clientId);
   if (!c) { state.clientId = null; return renderClients(header, view); }
-  header.innerHTML = `<button class="hdr-btn" id="back-clients" style="font-size:22px">‹</button><h1>${esc(c.name)}</h1>`;
+  header.innerHTML = `<button class="hdr-btn" id="back-clients" style="font-size:22px">‹</button><h1>Клиент</h1>`;
   document.getElementById('back-clients').onclick = () => { state.clientId = null; render(); };
 
   const appts = db.appointments.filter(a => a.clientId === c.id)
@@ -586,41 +672,68 @@ async function renderClientCard(header, view) {
   const paid = appts.filter(a=>a.paid).reduce((s,a)=>s+(a.price||0),0);
   const voices = await idbGetAll();
   const myVoices = voices.filter(v => v.clientId === c.id).sort((a,b)=>b.createdAt - a.createdAt);
+  const lastVisit = appts[0] ? fmtDate(appts[0].date) : '—';
 
   view.innerHTML = `
-    <div style="padding:0 16px 12px;color:var(--muted);font-size:14px">
-      ${[c.phone, c.tg].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}
+    <div class="client-header-row">
+      <div class="client-title">${esc(c.name)}</div>
+      <button class="hdr-add-btn" id="c-add-appt"><span class="plus">+</span> Запись</button>
     </div>
-    <div class="list">
-      <div class="card">
-        <div class="kv"><span class="k">Визитов</span><span class="v">${appts.length}</span></div>
-        <div class="kv"><span class="k">Всего заплатила</span><span class="v">${fmtMoney(paid)}</span></div>
-        <div class="kv"><span class="k">Последний визит</span><span class="v">${appts[0]?fmtDate(appts[0].date):'—'}</span></div>
+
+    <div class="client-contacts">
+      <div class="row">
+        <label>Телефон</label>
+        <input id="c-phone" type="tel" value="${esc(c.phone||'')}" placeholder="+7 ...">
       </div>
-      <div class="card">
-        <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">ЗАМЕТКИ</div>
-        <textarea id="c-notes" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;min-height:60px">${esc(c.notes||'')}</textarea>
-        <button class="btn ghost small" id="c-save-notes" style="margin-top:8px">Сохранить заметку</button>
+      <div class="row">
+        <label>Telegram</label>
+        <input id="c-tg" value="${esc(c.tg||'')}" placeholder="@ник">
       </div>
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-weight:600">Голосовые</div>
-          <button class="btn ghost small" id="c-rec" style="flex:0 0 auto;padding:6px 12px">🎤 Записать</button>
-        </div>
-        ${myVoices.length ? myVoices.map(v => voiceRowHTML(v, c)).join('') : `<div class="sub">Пока нет записей</div>`}
-      </div>
-      <div class="card">
-        <div style="font-weight:600;margin-bottom:4px">История визитов</div>
-        ${appts.length ? appts.map(a => `<div class="history-item"><span>${fmtDate(a.date)} · ${esc(a.service)}</span><span>${fmtMoney(a.price)}</span></div>`).join('') : `<div class="sub">Пока пусто</div>`}
-      </div>
+      <button class="btn ghost small" id="c-save-contacts">Сохранить контакты</button>
     </div>
-    <button class="fab" id="fab-add-client">+ Записать</button>
+
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:10px">Голосовые заметки</div>
+      <button class="voice-mini-btn" id="c-rec">🎤 Записать голосом</button>
+      ${myVoices.length ? myVoices.map(v => voiceRowHTML(v, c)).join('') : `<div class="sub" style="margin-top:8px">Пока нет записей</div>`}
+    </div>
+
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">ЗАМЕТКИ</div>
+      <textarea id="c-notes" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;min-height:60px">${esc(c.notes||'')}</textarea>
+      <button class="btn ghost small" id="c-save-notes" style="margin-top:8px">Сохранить заметку</button>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px">История визитов</div>
+      ${appts.length ? appts.map(a => `<div class="history-item"><span>${fmtDate(a.date)} · ${esc(a.service)}</span><span>${fmtMoney(a.price)}</span></div>`).join('') : `<div class="sub">Пока пусто</div>`}
+    </div>
+
+    <div class="client-stats">
+      <div class="stat-tile"><div class="k">Визитов</div><div class="v">${appts.length}</div></div>
+      <div class="stat-tile"><div class="k">Всего заплатил(а)</div><div class="v">${fmtMoney(paid)}</div></div>
+      <div class="stat-tile full"><div class="k">Последний визит</div><div class="v">${lastVisit}</div></div>
+    </div>
+
+    <div style="padding:16px;">
+      <button class="btn danger" id="c-del">Удалить клиента</button>
+    </div>
   `;
-  document.getElementById('c-save-notes').onclick = () => {
-    c.notes = document.getElementById('c-notes').value; saveDB(db); alert('Сохранено');
-  };
-  document.getElementById('fab-add-client').onclick = () => openNewAppt(c.id);
+
+  document.getElementById('c-add-appt').onclick = () => openNewAppt(c.id);
   document.getElementById('c-rec').onclick = () => openRecorder(c.id);
+  document.getElementById('c-save-notes').onclick = () => {
+    c.notes = document.getElementById('c-notes').value;
+    saveDB(db);
+    toast('Заметка сохранена');
+  };
+  document.getElementById('c-save-contacts').onclick = () => {
+    c.phone = document.getElementById('c-phone').value.trim();
+    c.tg = document.getElementById('c-tg').value.trim();
+    saveDB(db);
+    toast('Контакты сохранены');
+  };
+  document.getElementById('c-del').onclick = () => deleteClient(c.id);
   bindVoiceRows();
 }
 
@@ -727,15 +840,11 @@ function renderSettings(header, view) {
   document.getElementById('tpl-save').onclick = () => {
     db.settings.reminderTemplate = ta.value;
     saveDB(db);
-    const t = document.createElement('div');
-    t.textContent = '✅ Шаблон сохранён';
-    t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1c1f24;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:100;';
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2000);
+    toast('Шаблон сохранён');
   };
   document.getElementById('open-voices').onclick = openAllVoices;
   document.getElementById('open-about').onclick = () => {
-    alert('Записи мастера v10\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
+    alert('Записи мастера v11\n\nЛокальное приложение: данные хранятся только на этом устройстве.\n\nСоздано Романом и Иваном.');
   };
 }
 
@@ -855,7 +964,6 @@ function openSendReminder(apptId) {
     }
   };
 
-  // WhatsApp — пометить при клике, потом ссылка откроется сама
   const waEl = m.querySelector('[data-act="wa"]');
   if (waEl) waEl.onclick = () => {
     markSent();
@@ -863,7 +971,6 @@ function openSendReminder(apptId) {
     render();
   };
 
-  // SMS — тоже
   const smsEl = m.querySelector('[data-act="sms"]');
   if (smsEl) smsEl.onclick = () => {
     markSent();
@@ -871,7 +978,6 @@ function openSendReminder(apptId) {
     render();
   };
 
-  // Telegram — копировать, пометить, открыть, закрыть
   const tgBtn = m.querySelector('[data-act="tg"]');
   if (tgBtn) tgBtn.onclick = async () => {
     await copyText();
@@ -881,7 +987,6 @@ function openSendReminder(apptId) {
     window.open(tgLink, '_blank');
   };
 
-  // MAX — копировать, пометить, открыть, закрыть
   m.querySelector('[data-act="max"]').onclick = async () => {
     await copyText();
     markSent();
@@ -890,13 +995,11 @@ function openSendReminder(apptId) {
     window.open('https://max.ru', '_blank');
   };
 
-  // Копировать — только копирует, не помечает (пользователь ещё не отправил)
   m.querySelector('[data-act="copy"]').onclick = async () => {
     await copyText();
     alert('Текст скопирован');
   };
 
-  // Отметить как отправленное — пометить и закрыть
   m.querySelector('[data-act="mark-sent"]').onclick = () => {
     markSent();
     closeModal();
@@ -1275,11 +1378,7 @@ function openRecorder(prefillClientId) {
       closeModal();
       if (state.tab === 'clients' && state.clientId === clientId) render();
       else {
-        const t = document.createElement('div');
-        t.textContent = '✅ Заметка сохранена';
-        t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1c1f24;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:100;';
-        document.body.appendChild(t);
-        setTimeout(() => t.remove(), 2000);
+        toast('Заметка сохранена');
       }
     } catch (e) { alert('Не удалось сохранить: ' + e.message); }
   };
@@ -1294,7 +1393,6 @@ document.getElementById('tabs').onclick = e => {
   render();
 };
 
-// Обновление при возврате в приложение (например, из WhatsApp)
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && state.tab === 'today') {
     render();
