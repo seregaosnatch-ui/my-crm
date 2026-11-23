@@ -951,9 +951,15 @@ function openSendReminder(apptId) {
       <div class="row" style="background:#f6f7f9;padding:10px;border-radius:10px;font-size:13px;white-space:pre-wrap">${esc(text)}</div>
       <div style="color:var(--muted);font-size:12px;margin:6px 0 14px">Кому: ${esc(c.name)}${c.phone?' · '+esc(c.phone):''}${c.tg?' · '+esc(c.tg):''}</div>
 
-      ${waLink ? `<a class="btn primary" href="${waLink}" target="_blank" data-act="wa" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:8px;background:#25d366">🟢 WhatsApp</a>` : ''}
-      ${tgLink ? `<button class="btn primary" data-act="tg" style="background:#2796d4;margin-bottom:8px">✈️ Telegram</button>` : ''}
-      ${smsLink ? `<a class="btn primary" href="${smsLink}" data-act="sms" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#8a909a;margin-bottom:8px">💬 SMS</a>` : ''}
+           ${waLink
+        ? `<a class="btn primary" href="${waLink}" target="_blank" data-act="wa" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:8px;background:#25d366">🟢 WhatsApp</a>`
+        : `<button class="btn primary" data-act="no-phone" style="background:#25d366;margin-bottom:8px;opacity:.55">🟢 WhatsApp — нет телефона</button>`}
+      ${tgLink
+        ? `<button class="btn primary" data-act="tg" style="background:#2796d4;margin-bottom:8px">✈️ Telegram</button>`
+        : `<button class="btn primary" data-act="no-tg" style="background:#2796d4;margin-bottom:8px;opacity:.55">✈️ Telegram — нет ника</button>`}
+      ${smsLink
+        ? `<a class="btn primary" href="${smsLink}" data-act="sms" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#8a909a;margin-bottom:8px">💬 SMS</a>`
+        : `<button class="btn primary" data-act="no-phone" style="background:#8a909a;margin-bottom:8px;opacity:.55">💬 SMS — нет телефона</button>`}
       <button class="btn primary" data-act="max" style="background:#ff5b22;margin-bottom:8px">🟠 MAX</button>
       <button class="btn ghost" data-act="copy" style="margin-bottom:8px">📋 Копировать текст</button>
 
@@ -982,7 +988,25 @@ function openSendReminder(apptId) {
     closeModal();
     render();
   };
+  const noPhone = m.querySelector('[data-act="no-phone"]');
+  if (noPhone) noPhone.onclick = () => {
+    if (confirm('У клиента не указан телефон. Открыть карточку, чтобы заполнить?')) {
+      closeModal();
+      state.tab = 'clients';
+      state.clientId = c.id;
+      render();
+    }
+  };
 
+  const noTg = m.querySelector('[data-act="no-tg"]');
+  if (noTg) noTg.onclick = () => {
+    if (confirm('У клиента не указан Telegram. Открыть карточку, чтобы заполнить?')) {
+      closeModal();
+      state.tab = 'clients';
+      state.clientId = c.id;
+      render();
+    }
+  };
   const smsEl = m.querySelector('[data-act="sms"]');
   if (smsEl) smsEl.onclick = () => {
     markSent();
